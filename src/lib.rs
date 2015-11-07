@@ -54,7 +54,7 @@ impl<'b, 'c> Client<'b, 'c>{
     	self
     } 
 
-    pub fn connect(self, host: &'b str) -> Result<Client<'b, 'c>, i32>{
+    pub fn connect(&self, host: &'b str) -> Result<&Self, i32>{
         let host = CString::new(host).unwrap().as_ptr();
         let nRet;
 
@@ -69,6 +69,32 @@ impl<'b, 'c> Client<'b, 'c>{
         	Err(nRet)
         }
     }
+
+    pub fn register_onconnect_callback<F>(&self, mut callback: F) where F: Fn(i32){
+
+    	/* Convert the rust closure into void* to be used as user_data. This will
+    	   be passed to call back automatically by the library */
+    	let cb = &callback as *const _ as *mut libc::c_void;
+       	 
+        unsafe{
+        	bindings::mosquitto_user_data_set(self.mosquitto, cb); /* Set our closure as user data */
+            bindings::mosquitto_connect_callback_set(self.mosquitto, Some(onconnect_wrapper::<F>)); /* Register callback */
+        }
+        
+        /* Registered callback. user data is our closure */
+        unsafe extern "C" fn onconnect_wrapper<F>(mqtt: *mut bindings::Struct_mosquitto, closure: *mut libc::c_void, val: libc::c_int)
+        where F:Fn(i32){
+        	let closure = closure as *mut F;
+        	(*closure)(val as i32);
+      		
+        }
+    }
+
+    pub fn loop_forever(&self){
+        unsafe{
+            bindings::mosquitto_loop_forever(self.mosquitto, 1000, 1000);
+        }
+    }
 }
 
 #[test]
@@ -77,6 +103,11 @@ fn it_works() {
 	
 	match client.connect("test.mosquitto.org"){
 		Ok(_) => println!("Connection successful"),
-		Err(n) => println!("Connection error = {:?}", n)
+		Err(n) => panic!("Connection error = {:?}", n)
 	}
+
+	let i = 100;
+
+	client.register_onconnect_callback(|a:i32|println!("@@@ On connect callback {}@@@", a + i));
+	client.loop_forever();
 }
