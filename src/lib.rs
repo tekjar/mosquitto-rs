@@ -25,13 +25,16 @@ pub struct Client<'b, 'c>{
 	pub user_name: Option<&'b str>,
 	pub password: Option<&'c str>,
 	pub keep_alive: i32,
-	pub clean: bool,
+	pub clean_session: bool,
 	mosquitto: * mut bindings::Struct_mosquitto
 }
 
 impl<'b, 'c> Client<'b, 'c>{
 
     pub fn new(id: &str) -> Client{
+    	unsafe{
+    		bindings::mosquitto_lib_init();
+    	}
         let name = CString::new(id).unwrap().as_ptr();
         let mosquitto: * mut bindings::Struct_mosquitto;
         unsafe{
@@ -44,29 +47,61 @@ impl<'b, 'c> Client<'b, 'c>{
         	user_name: None,
         	password: None,
         	keep_alive: 10,
-        	clean: true,
+        	clean_session: true,
         	mosquitto:mosquitto,
         }
+    }
+
+    pub fn auth(mut self, user_name: &'b str, password: &'c str) -> Self{
+    	self.user_name = Some(user_name);
+    	self.password = Some(password);
+    	self
     }
 
     pub fn keep_alive(mut self, keepalive: i32) -> Self{
     	self.keep_alive = keepalive;
     	self
-    } 
+    }
+
+    pub fn clean_session(mut self, clean: bool) -> Self{
+    	self.clean_session = clean;
+    	self
+    }
 
     pub fn connect(&self, host: &'b str) -> Result<&Self, i32>{
         let host = CString::new(host).unwrap().as_ptr();
-        let nRet;
+        
+        let mut nRet;
+        let u_name;
+        let pwd;
+
+        match self.user_name{
+        	Some(user_name) => {	
+        								u_name = CString::new(user_name).unwrap().as_ptr();
+        								match self.password{
+        								    Some(password) => {	
+        								    					println!("user_name = {:?}, password = {:?}", user_name, password);
+        								    					pwd = CString::new(password).unwrap().as_ptr();
+        								    					unsafe{
+        								    						bindings::mosquitto_username_pw_set(self.mosquitto, u_name, pwd);
+        								    				  	}
+        								    				  }
+        								    None => ()
+        								}
+        								
+        							},
+        	None => ()
+
+        }
 
         unsafe{
             nRet = bindings::mosquitto_connect(self.mosquitto, host, 1883, self.keep_alive);
-        }
-
-        if nRet == 0{
-        	Ok(self)
-        }
-        else{
-        	Err(nRet)
+            if nRet == 0{
+        		Ok(self)
+        	}
+        	else{
+        		Err(nRet)
+        	}
         }
     }
 
@@ -76,6 +111,7 @@ impl<'b, 'c> Client<'b, 'c>{
     	   be passed to call back automatically by the library */
     	let cb = &callback as *const _ as *mut libc::c_void;
        	 
+
         unsafe{
         	bindings::mosquitto_user_data_set(self.mosquitto, cb); /* Set our closure as user data */
             bindings::mosquitto_connect_callback_set(self.mosquitto, Some(onconnect_wrapper::<F>)); /* Register callback */
@@ -99,9 +135,10 @@ impl<'b, 'c> Client<'b, 'c>{
 
 #[test]
 fn it_works() {
-	let client = Client::new("test").keep_alive(30);
-	
-	match client.connect("test.mosquitto.org"){
+	//let client = Client::new("test").keep_alive(30).clean_session(true).auth("root", "admin");
+	let client = Client::new("test").keep_alive(30).clean_session(true);
+
+	match client.connect("192.168.0.134"){
 		Ok(_) => println!("Connection successful"),
 		Err(n) => panic!("Connection error = {:?}", n)
 	}
