@@ -4,51 +4,41 @@ use std::ptr;
 use std::ffi::{CString, CStr};
 
 mod bindings;
-/* The linked code creates a client that connects to a broker at
- * localhost:1883, subscribes to the topics "tick", "control".
- * When received a message on 'tick', it'll be forwarded to tock
- */
-
-/* 1. Start the broker --> mosquitto -c /etc/mosquitto/mosquitto.conf -d
-   2. cargo run
-   3. mosquitto_sub -t "tock"
-   4. mosquitto_pub -t "tick" -m "Hello World"
-   5. mosquitto_pub -t "control" -m "halt" --> stop
-*/
-
 
 //#[derive(Default)]
 #[derive(Debug)]
-pub struct Client<'b, 'c>{
-	pub host: String,
+pub struct Client<'b, 'c, 'd>{
 	pub id: String,
 	pub user_name: Option<&'b str>,
 	pub password: Option<&'c str>,
+	pub host: Option<&'d str>,
 	pub keep_alive: i32,
 	pub clean_session: bool,
-	mosquitto: * mut bindings::Struct_mosquitto
+	pub mosquitto: * mut bindings::Struct_mosquitto
 }
 
-impl<'b, 'c> Client<'b, 'c>{
+pub enum Qos{
+	AtMostOnce, 
+	AtLeastOnce, 
+	ExactlyOnce
+}
+
+impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
 
     pub fn new(id: &str) -> Client{
+    	
     	unsafe{
     		bindings::mosquitto_lib_init();
-    	}
-        let name = CString::new(id).unwrap().as_ptr();
-        let mosquitto: * mut bindings::Struct_mosquitto;
-        unsafe{
-            mosquitto = bindings::mosquitto_new(name, 1, ptr::null_mut());
-        }
-        //TODO: Implement default for mosquitto and remove this ugly default host
+    	}       
+        
         Client{
-        	host: "test.mosquitto.org".to_string(),
         	id: id.to_string(),
         	user_name: None,
         	password: None,
+        	host: None,
         	keep_alive: 10,
         	clean_session: true,
-        	mosquitto:mosquitto,
+        	mosquitto: ptr::null_mut(),
         }
     }
 
@@ -68,13 +58,27 @@ impl<'b, 'c> Client<'b, 'c>{
     	self
     }
 
-    pub fn connect(&self, host: &'b str) -> Result<&Self, i32>{
-        let host = CString::new(host).unwrap().as_ptr();
+    pub fn connect(&mut self, host: &'d str) -> Result<&Self, i32>{
+
+    	self.host = Some(host);
         
-        let mut nRet;
+        let host = CString::new(host).unwrap().as_ptr();
+
+        let id = self.id.clone();
+		let id = CString::new(id).unwrap().as_ptr();
+
+        
+        let n_ret;
         let u_name;
         let pwd;
 
+        let mosquitto: * mut bindings::Struct_mosquitto;
+        unsafe{
+            mosquitto = bindings::mosquitto_new(id, self.clean_session as u8, ptr::null_mut());
+        }
+        self.mosquitto = mosquitto;
+       
+        /* Set username and password before connecting */
         match self.user_name{
         	Some(user_name) => {	
         								u_name = CString::new(user_name).unwrap().as_ptr();
@@ -94,18 +98,21 @@ impl<'b, 'c> Client<'b, 'c>{
 
         }
 
+        /* Connect to broker */
         unsafe{
-            nRet = bindings::mosquitto_connect(self.mosquitto, host, 1883, self.keep_alive);
-            if nRet == 0{
+            n_ret = bindings::mosquitto_connect(self.mosquitto, host, 1883, self.keep_alive);
+            if n_ret == 0{
         		Ok(self)
         	}
         	else{
-        		Err(nRet)
+        		Err(n_ret)
         	}
         }
     }
 
-    pub fn register_onconnect_callback<F>(&self, mut callback: F) where F: Fn(i32){
+    /*  Registered callback is called when the broker sends a CONNACK message in response 
+    	to a connection. */
+    pub fn onconnect_callback<F>(&self, callback: F) where F: Fn(i32){
 
     	/* Convert the rust closure into void* to be used as user_data. This will
     	   be passed to call back automatically by the library */
@@ -126,25 +133,46 @@ impl<'b, 'c> Client<'b, 'c>{
         }
     }
 
+    pub fn subscribe(&self, topic: &str, qos: Qos){
+        let topic = CString::new(topic).unwrap().as_ptr();
+
+        let qos = match qos {
+            Qos::AtMostOnce => 0,
+            Qos::AtLeastOnce => 1,
+            Qos::ExactlyOnce => 2
+        };
+
+        unsafe{
+            bindings::mosquitto_subscribe(self.mosquitto, ptr::null_mut(), topic, qos);
+        }
+    }
+
+    pub fn onmesssage_callback<F>(&self, callback:F) where F:FnMut(&str){
+        
+        let cb = &callback as *const _ as *mut libc::c_void;
+
+        unsafe{
+        	bindings::mosquitto_user_data_set(self.mosquitto, cb); /* Set our closure as user data */
+            bindings::mosquitto_message_callback_set(self.mosquitto, Some(onmessage_wrapper::<F>));
+        }
+        
+
+        unsafe extern "C" fn onmessage_wrapper<F>(mqtt: *mut bindings::Struct_mosquitto, closure: *mut libc::c_void, mqtt_message: *const bindings::Struct_mosquitto_message)
+        where F:FnMut(&str){
+            let closure = closure as *mut F;
+            
+            let mqtt_message = (*mqtt_message).payload as *const i8;
+            let mqtt_message = CStr::from_ptr(mqtt_message).to_bytes();
+            let mqtt_message = std::str::from_utf8(mqtt_message).unwrap();
+
+            (*closure)(mqtt_message);
+            
+        }
+    }
+
     pub fn loop_forever(&self){
         unsafe{
             bindings::mosquitto_loop_forever(self.mosquitto, 1000, 1000);
         }
     }
-}
-
-#[test]
-fn it_works() {
-	//let client = Client::new("test").keep_alive(30).clean_session(true).auth("root", "admin");
-	let client = Client::new("test").keep_alive(30).clean_session(true);
-
-	match client.connect("192.168.0.134"){
-		Ok(_) => println!("Connection successful"),
-		Err(n) => panic!("Connection error = {:?}", n)
-	}
-
-	let i = 100;
-
-	client.register_onconnect_callback(|a:i32|println!("@@@ On connect callback {}@@@", a + i));
-	client.loop_forever();
 }
