@@ -14,7 +14,7 @@ use mosquitto::{Client, Qos};
 */
 
 #[test]
-fn it_works() {
+fn test_functionality() {
 
 	/* Set before connect */
 	//let client = Client::new("test").keep_alive(30).clean_session(true).auth("root", "admin");
@@ -32,11 +32,13 @@ fn it_works() {
 
 	client.onconnect_callback(|a:i32|println!("@@@ On connect callback {}@@@", a + i));
 
-	client.subscribe("hello/world", Qos::AtMostOnce);
 	client.onsubscribe_callback(|mid|println!("Subscribe request received for message {:?}", mid));
+	client.subscribe("hello/world", Qos::AtMostOnce);
+	
 
+	client.onpublish_callback(|mid|println!("Publish request received for message {:?}", mid));
 	client.publish("hello/world", "Hello World", Qos::AtMostOnce);
-	client.onpublish_callback(|mid|println!("Publish request received for message {:?}", mid));	
+		
 
 	let mut count = 0; //TODO: Weird count print in closure callback
 	client.onmesssage_callback(|s|{									
