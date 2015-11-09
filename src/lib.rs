@@ -111,7 +111,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
     }
 
     /*  Registered callback is called when the broker sends a CONNACK message in response 
-    	to a connection. */
+    	to a connection. Will be called even incase of failure*/
     pub fn onconnect_callback<F>(&self, callback: F) where F: Fn(i32){
 
     	/* Convert the rust closure into void* to be used as user_data. This will
@@ -144,6 +144,58 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
 
         unsafe{
             bindings::mosquitto_subscribe(self.mosquitto, ptr::null_mut(), topic, qos);
+        }
+    }
+
+    /* Call back that will be called when broker responds to a subscription */
+    pub fn onsubscribe_callback<F>(&self, callback:F) where F:FnMut(i32){
+
+        let cb = &callback as *const _ as *mut libc::c_void;
+
+        unsafe{
+            bindings::mosquitto_user_data_set(self.mosquitto, cb);
+            bindings::mosquitto_subscribe_callback_set(self.mosquitto, Some(onsubscribe_wrapper::<F>));
+        }
+        
+        unsafe extern "C" fn onsubscribe_wrapper<F>(mqtt: *mut bindings::Struct_mosquitto, closure: *mut libc::c_void, mid: libc::c_int, qos_count: libc::c_int, qos_list: *const ::libc::c_int)
+        where F:FnMut(i32){
+            let closure = closure as *mut F;
+            (*closure)(mid);
+        }
+    }
+
+
+    pub fn publish(&self, topic: &str, msg: &str, qos: Qos){
+        
+        let msg_len = msg.len();
+        let topic = CString::new(topic.to_owned()).unwrap().as_ptr();
+        let msg = CString::new(msg.to_owned()).unwrap().as_ptr();
+        
+        let qos = match qos {
+            Qos::AtMostOnce => 0,
+            Qos::AtLeastOnce => 1,
+            Qos::ExactlyOnce => 2
+        };
+
+        unsafe{
+            bindings::mosquitto_publish(self.mosquitto, ptr::null_mut(), topic, msg_len as i32, msg as *mut libc::c_void, qos, 0);
+        }
+    }
+
+
+    pub fn onpublish_callback<F>(&self, callback:F) where F:FnMut(i32){
+
+        let cb = &callback as *const _ as *mut libc::c_void;
+
+        unsafe{
+            bindings::mosquitto_user_data_set(self.mosquitto, cb);
+            bindings::mosquitto_publish_callback_set(self.mosquitto, Some(onpublish_wrapper::<F>));
+        }
+
+        unsafe extern "C" fn onpublish_wrapper<F>(mqtt: *mut bindings::Struct_mosquitto, closure: *mut libc::c_void, mid: libc::c_int)
+        where F:FnMut(i32){
+            let closure = closure as *mut F;
+            (*closure)(mid);
         }
     }
 

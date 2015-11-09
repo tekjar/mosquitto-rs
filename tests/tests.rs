@@ -33,13 +33,15 @@ fn it_works() {
 	client.onconnect_callback(|a:i32|println!("@@@ On connect callback {}@@@", a + i));
 
 	client.subscribe("hello/world", Qos::AtMostOnce);
+	client.onsubscribe_callback(|mid|println!("Subscribe request received for message {:?}", mid));
+
+	client.publish("hello/world", "Hello World", Qos::AtMostOnce);
+	client.onpublish_callback(|mid|println!("Publish request received for message {:?}", mid));	
 
 	let mut count = 0; //TODO: Weird count print in closure callback
-	client.onmesssage_callback(|s|{
-									
+	client.onmesssage_callback(|s|{									
 									count += 1;
-									println!("Message = {:?}, Count = {:?}", s, count);
-								   
+									println!("Message = {:?}, Count = {:?}", s, count);							   
 								   });
 
 	client.loop_forever();

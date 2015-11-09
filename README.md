@@ -22,10 +22,21 @@ match client.connect("192.168.0.134"){
 
 ```
 client.subscribe("hello/world", Qos::AtMostOnce);
+
+/* Callback when broker says that it received subscribe request */
+
+client.onsubscribe_callback(|mid|println!("Subscribe request received for message {:?}", mid));
+```
+
+####Publish to a topic
+
+```
+client.publish("hello/world", "Hello World", Qos::AtMostOnce);
+client.onpublish_callback(|mid|println!("Publish request received for message {:?}", mid));
 ```
 
 
-####Callback closures
+####On message received callback closures
 
 ```
 let i = 100;
