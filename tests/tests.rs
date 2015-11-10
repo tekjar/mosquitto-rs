@@ -23,14 +23,14 @@ fn test_functionality() {
 					.clean_session(true);
 
 	
+	let i = 100;
+
+	client.onconnect_callback(|a:i32|println!("@@@ On connect callback {}@@@", a + i));
+
 	match client.connect("192.168.0.134"){
 		Ok(_) => println!("Connection successful --> {:?}", client),
 		Err(n) => panic!("Connection error = {:?}", n)
 	}
-
-	let i = 100;
-
-	client.onconnect_callback(|a:i32|println!("@@@ On connect callback {}@@@", a + i));
 
 	client.onsubscribe_callback(|mid|println!("Subscribe request received for message {:?}", mid));
 	client.subscribe("hello/world", Qos::AtMostOnce);
