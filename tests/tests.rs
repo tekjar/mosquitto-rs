@@ -20,7 +20,8 @@ fn all_ok() {
 	//let client = Client::new("test").keep_alive(30).clean_session(true).auth("root", "admin");
 	let mut client = Client::new("test")
 					.keep_alive(5)
-					.clean_session(false);
+					.clean_session(false)
+					.will("goodbye", "my last words");
 
 	
 	let i = 100;

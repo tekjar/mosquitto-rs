@@ -75,7 +75,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
     	self
     }
 
-    pub fn will(mut self, topic: &str, message: &str){
+    pub fn will(mut self, topic: &str, message: &str) -> Self{
 
         let msg_len = message.len();
         let topic = CString::new(topic);
@@ -85,6 +85,8 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
             /* Publish will with Qos 2 */
             bindings::mosquitto_will_set(self.mosquitto, topic.unwrap().as_ptr(), msg_len as i32, message.unwrap().as_ptr() as *mut libc::c_void, 2, 0);
         }
+
+        self
 
     }
 
