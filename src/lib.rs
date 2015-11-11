@@ -26,10 +26,13 @@ pub enum Qos{
 impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
 
     pub fn new(id: &str) -> Client{
-    	
-    	unsafe{
-    		bindings::mosquitto_lib_init();
-    	}       
+
+        let mosquitto: * mut bindings::Struct_mosquitto;
+        
+        unsafe{
+            let id = CString::new(id);
+            mosquitto = bindings::mosquitto_new(id.unwrap().as_ptr(), true as u8, ptr::null_mut());
+        }
         
         Client{
         	id: id.to_string(),
@@ -38,7 +41,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
         	host: None,
         	keep_alive: 10,
         	clean_session: true,
-        	mosquitto: ptr::null_mut(),
+        	mosquitto: mosquitto,
         }
     }
 
@@ -55,39 +58,56 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
 
     pub fn clean_session(mut self, clean: bool) -> Self{
     	self.clean_session = clean;
+
+
+        /* Reinitialise the client if clean_session is changed to false */
+        if clean == false{
+            let mosquitto: * mut bindings::Struct_mosquitto;
+        
+            unsafe{
+                let id = self.id.clone();
+                let id = CString::new(id);
+                
+                bindings::mosquitto_reinitialise(self.mosquitto, id.unwrap().as_ptr(), clean as u8, ptr::null_mut());
+            }
+        }
+
     	self
+    }
+
+    pub fn will(mut self, topic: &str, message: &str){
+
+        let msg_len = message.len();
+        let topic = CString::new(topic);
+        let message = CString::new(message);
+
+        unsafe{
+            /* Publish will with Qos 2 */
+            bindings::mosquitto_will_set(self.mosquitto, topic.unwrap().as_ptr(), msg_len as i32, message.unwrap().as_ptr() as *mut libc::c_void, 2, 0);
+        }
+
     }
 
     pub fn connect(&mut self, host: &'d str) -> Result<&Self, i32>{
 
     	self.host = Some(host);
         
-        let host = CString::new(host).unwrap().as_ptr();
-
-        let id = self.id.clone();
-		let id = CString::new(id).unwrap().as_ptr();
-
+        let host = CString::new(host);
         
         let n_ret;
         let u_name;
         let pwd;
-
-        let mosquitto: * mut bindings::Struct_mosquitto;
-        unsafe{
-            mosquitto = bindings::mosquitto_new(id, self.clean_session as u8, ptr::null_mut());
-        }
-        self.mosquitto = mosquitto;
        
         /* Set username and password before connecting */
         match self.user_name{
         	Some(user_name) => {	
-        								u_name = CString::new(user_name).unwrap().as_ptr();
+        								u_name = CString::new(user_name);
         								match self.password{
         								    Some(password) => {	
         								    					println!("user_name = {:?}, password = {:?}", user_name, password);
-        								    					pwd = CString::new(password).unwrap().as_ptr();
+        								    					pwd = CString::new(password);
         								    					unsafe{
-        								    						bindings::mosquitto_username_pw_set(self.mosquitto, u_name, pwd);
+        								    						bindings::mosquitto_username_pw_set(self.mosquitto, u_name.unwrap().as_ptr(), pwd.unwrap().as_ptr());
         								    				  	}
         								    				  }
         								    None => ()
@@ -100,7 +120,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
 
         /* Connect to broker */
         unsafe{
-            n_ret = bindings::mosquitto_connect(self.mosquitto, host, 1883, self.keep_alive);
+            n_ret = bindings::mosquitto_connect(self.mosquitto, host.unwrap().as_ptr(), 1883, self.keep_alive);
             if n_ret == 0{
         		Ok(self)
         	}
@@ -134,7 +154,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
     }
 
     pub fn subscribe(&self, topic: &str, qos: Qos){
-        let topic = CString::new(topic).unwrap().as_ptr();
+        let topic = CString::new(topic);
 
         let qos = match qos {
             Qos::AtMostOnce => 0,
@@ -143,7 +163,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
         };
 
         unsafe{
-            bindings::mosquitto_subscribe(self.mosquitto, ptr::null_mut(), topic, qos);
+            bindings::mosquitto_subscribe(self.mosquitto, ptr::null_mut(), topic.unwrap().as_ptr(), qos);
         }
     }
 
@@ -165,12 +185,21 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
     }
 
 
-    pub fn publish(&self, topic: &str, msg: &str, qos: Qos){
+    pub fn publish(&self, topic: &str, message: &str, qos: Qos){
         
-        let msg_len = msg.len();
-        let topic = CString::new(topic.to_owned()).unwrap().as_ptr();
-        let msg = CString::new(msg.to_owned()).unwrap().as_ptr();
-        
+        let msg_len = message.len();
+        /*
+         * CString::new(topic).unwrap().as_ptr() is wrong.
+         * topic String gets destroyed and pointer is invalidated
+         * Whem message is created, it will allocate to destroyed space of 'topic'
+         * topic is now pointing to it and publish is happening on the same message String.
+         *
+         * Try let topic = CString::new(topic).unwrap().as_ptr(); instead of let topic = CString::new(topic)
+         */
+
+        let topic = CString::new(topic); 
+        let message = CString::new(message);
+
         let qos = match qos {
             Qos::AtMostOnce => 0,
             Qos::AtLeastOnce => 1,
@@ -178,7 +207,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
         };
 
         unsafe{
-            bindings::mosquitto_publish(self.mosquitto, ptr::null_mut(), topic, msg_len as i32, msg as *mut libc::c_void, qos, 0);
+            bindings::mosquitto_publish(self.mosquitto, ptr::null_mut(), topic.unwrap().as_ptr(), msg_len as i32, message.unwrap().as_ptr() as *mut libc::c_void, qos, 0);
         }
     }
 
