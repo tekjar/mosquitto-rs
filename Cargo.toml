@@ -5,3 +5,4 @@ authors = ["RTR <k.teza1@gmail.com>"]
 
 [dependencies]
 libc = "*"
+clippy = "*"
