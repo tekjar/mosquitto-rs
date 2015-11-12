@@ -22,6 +22,7 @@ fn all_ok() {
 					.keep_alive(5)
 					.clean_session(false)
 					.will("goodbye", "my last words");
+				//	.auth("admin", "admin");			
 
 	
 	let i = 100;

@@ -133,7 +133,8 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
     }
 
     /*  Registered callback is called when the broker sends a CONNACK message in response 
-    	to a connection. Will be called even incase of failure*/
+    	to a connection. Will be called even incase of failure. All your sub/pub stuff
+        should ideally be done in this callback when connection is successful */
     pub fn onconnect_callback<F>(&self, callback: F) where F: Fn(i32){
 
     	/* Convert the rust closure into void* to be used as user_data. This will
@@ -230,6 +231,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
         }
     }
 
+
     pub fn onmesssage_callback<F>(&self, callback:F) where F:FnMut(&str){
         
         let cb = &callback as *const _ as *mut libc::c_void;
@@ -258,4 +260,14 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
             bindings::mosquitto_loop_forever(self.mosquitto, 1000, 1000);
         }
     }
+}
+
+
+ impl<'b, 'c, 'd> Drop for Client<'b, 'c, 'd>{
+    fn drop(&mut self){
+        unsafe{
+            bindings::mosquitto_destroy(self.mosquitto);
+            bindings::mosquitto_lib_cleanup();
+        }
+    } 
 }
