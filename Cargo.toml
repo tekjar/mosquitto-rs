@@ -6,5 +6,6 @@ authors = ["RTR <k.teza1@gmail.com>"]
 [dependencies]
 libc = "*"
 
-[dev-dependencies]
-clippy = "*"
+[dependencies.c_sources]
+path = "c_sources"
+version = "*"

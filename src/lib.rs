@@ -1,9 +1,8 @@
 extern crate libc;
+extern crate c_sources as bindings;
 
 use std::ptr;
 use std::ffi::{CString, CStr};
-
-mod bindings;
 
 // #[derive(Default)]
 #[derive(Debug)]
