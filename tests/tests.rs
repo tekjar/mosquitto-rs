@@ -18,35 +18,57 @@ fn all_ok() {
 
 	/* Set before connect */
 	//let client = Client::new("test").keep_alive(30).clean_session(true).auth("root", "admin");
+
+	// let mut clients: Vec<Client> = vec![];
+
+	// for i in 0..1000{
+
+	// 	let mut client = Client::new("test".to_string())
+	// 				.keep_alive(5)
+	// 				.clean_session(false)
+	// 				.will("goodbye", "my last words");
+	// 	clients.push(client);
+	// }
+	
+
+
+
+
 	let mut client = Client::new("test")
 					.keep_alive(5)
 					.clean_session(false)
 					.will("goodbye", "my last words");
-				//	.auth("admin", "admin");			
+				//	.auth("admin", "admin");
+
+
 
 	
 	let i = 100;
 
-	client.onconnect_callback(|a:i32|println!("@@@ On connect callback {}@@@", a + i));
+	client.onconnect_callback(move |a: i32|{
+									println!("i = {:?}", i);
+									println!("@@@ On connect callback {}@@@", a)
+						  		});
+	
 	match client.connect("localhost"){
-		Ok(_) => println!("Connection successful --> {:?}", client),
+		Ok(_) => println!("Connection successful --> {:?}", "client"),
 		Err(n) => panic!("Connection error = {:?}", n)
 	}
 
-	client.onsubscribe_callback(|mid|println!("@@@ Subscribe request received for message mid = {:?}", mid));
+	client.onsubscribe_callback(move|mid|println!("@@@ Subscribe request received for message mid = {:?}", mid));
 	client.subscribe("hello/world", Qos::AtMostOnce);
 
-	let mut count = 0; //TODO: Weird count print in closure callback
-	client.onmesssage_callback(|s|{									
-									count += 1;
-									println!("@@@ Message = {:?}, Count = {:?}", s, count);							   
-								   });
+	// let mut count = 0; //TODO: Weird count print in closure callback
+	// client.onmesssage_callback(&|s|{									
+	// 								count += 1;
+	// 								println!("@@@ Message = {:?}, Count = {:?}", s, count);							   
+	// 							   });
 	
 
 	client.onpublish_callback(|mid|println!("@@@ Publish request received for message mid = {:?}", mid));
 
 	for i in 0..5{
-		client.publish("hello/world", "Hello", Qos::AtMostOnce);
+	 	client.publish("hello/world", "Hello", Qos::AtMostOnce);
 	}
 
 	client.loop_forever();

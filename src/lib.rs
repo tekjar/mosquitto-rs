@@ -2,10 +2,12 @@ extern crate libc;
 extern crate c_sources as bindings;
 
 use std::ptr;
+use std::mem;
 use std::ffi::{CString, CStr};
+use std::collections::HashMap;
 
 // #[derive(Default)]
-#[derive(Debug)]
+// #[derive(Debug)]
 pub struct Client<'b, 'c, 'd> {
     pub id: String,
     pub user_name: Option<&'b str>,
@@ -13,6 +15,7 @@ pub struct Client<'b, 'c, 'd> {
     pub host: Option<&'d str>,
     pub keep_alive: i32,
     pub clean_session: bool,
+    pub callbacks: HashMap<String, Box<Fn(i32)>>,
     pub mosquitto: *mut bindings::Struct_mosquitto,
 }
 
@@ -27,21 +30,30 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
     pub fn new(id: &str) -> Client {
 
         let mosquitto: *mut bindings::Struct_mosquitto;
+        let callbacks: HashMap<String, Box<Fn(i32)>> = HashMap::new();
 
-        unsafe {
-            let id = CString::new(id);
-            mosquitto = bindings::mosquitto_new(id.unwrap().as_ptr(), true as u8, ptr::null_mut());
-        }
-
-        Client {
+        let mut client = Client {
             id: id.to_string(),
             user_name: None,
             password: None,
             host: None,
             keep_alive: 10,
             clean_session: true,
-            mosquitto: mosquitto,
+            callbacks: callbacks,
+            mosquitto: ptr::null_mut(),
+        };
+
+        let id = CString::new(id);
+        unsafe {
+            //Creating new client and setting reference to Client callbacks as userdata.
+            //let c = &client as *const _ as *mut libc::c_void;
+            let i = 10;
+            let c = &i as *const _ as *mut libc::c_void;
+            println!("###### {:?}", c);
+            client.mosquitto = bindings::mosquitto_new(id.unwrap().as_ptr(), true as u8, c);
+            bindings::mosquitto_user_data_set(client.mosquitto, c);
         }
+        client
     }
 
     pub fn auth(mut self, user_name: &'b str, password: &'c str) -> Self {
@@ -125,7 +137,6 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
 
             }
             None => (),
-
         }
 
         // Connect to broker
@@ -142,35 +153,37 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
         }
     }
 
-    //  Registered callback is called when the broker sends a CONNACK message in response
+    // Registered callback is called when the broker sends a CONNACK message in response
     // to a connection. Will be called even incase of failure. All your sub/pub stuff
     // should ideally be done in this callback when connection is successful
-    pub fn onconnect_callback<F>(&self, callback: F)
-        where F: Fn(i32)
+    pub fn onconnect_callback<F>(&mut self, callback:  F)
+        where F: Fn(i32), F: 'static
     {
-
-        // Convert the rust closure into void* to be used as user_data. This will
-        // be passed to call back automatically by the library
-        let cb = &callback as *const _ as *mut libc::c_void;
-
+        self.callbacks.insert("on_connect".to_string(), Box::new(callback));
+        let cb = &self.callbacks as *const _ as *mut libc::c_void;
+        println!("###### {:?}", cb);
 
         unsafe {
             // Set our closure as user data
             bindings::mosquitto_user_data_set(self.mosquitto, cb);
             // Register callback
-            bindings::mosquitto_connect_callback_set(self.mosquitto, Some(onconnect_wrapper::<F>));
+            bindings::mosquitto_connect_callback_set(self.mosquitto, Some(onconnect_wrapper));
         }
 
         // Registered callback. user data is our closure
-        unsafe extern "C" fn onconnect_wrapper<F>(mqtt: *mut bindings::Struct_mosquitto,
+        unsafe extern "C" fn onconnect_wrapper(mqtt: *mut bindings::Struct_mosquitto,
                                                   closure: *mut libc::c_void,
                                                   val: libc::c_int)
-            where F: Fn(i32)
         {
-            let closure = closure as *mut F;
-            (*closure)(val as i32);
+            println!("###### {:?}", closure);
 
+            let callbacks: &mut HashMap<String, Box<Fn(i32)>> = mem::transmute(closure);
+            match (*callbacks).get("on_connect") {
+                Some(cb) => cb(val as i32),
+                _ => panic!("No callback found"),
+            }
         }
+        //mem::forget(cb);
     }
 
     pub fn subscribe(&self, topic: &str, qos: Qos) {
@@ -191,27 +204,31 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
     }
 
     // Call back that will be called when broker responds to a subscription
-    pub fn onsubscribe_callback<F>(&self, callback: F)
-        where F: FnMut(i32)
+    pub fn onsubscribe_callback<F>(&mut self, callback: F)
+        where F: Fn(i32), F:'static
     {
-
-        let cb = &callback as *const _ as *mut libc::c_void;
+        self.callbacks.insert("on_subscribe".to_string(), Box::new(callback));
+        let cb = &self.callbacks as *const _ as *mut libc::c_void;
 
         unsafe {
             bindings::mosquitto_user_data_set(self.mosquitto, cb);
             bindings::mosquitto_subscribe_callback_set(self.mosquitto,
-                                                       Some(onsubscribe_wrapper::<F>));
+                                                       Some(onsubscribe_wrapper));
         }
 
-        unsafe extern "C" fn onsubscribe_wrapper<F>(mqtt: *mut bindings::Struct_mosquitto,
+        unsafe extern "C" fn onsubscribe_wrapper(mqtt: *mut bindings::Struct_mosquitto,
                                                     closure: *mut libc::c_void,
                                                     mid: libc::c_int,
                                                     qos_count: libc::c_int,
                                                     qos_list: *const ::libc::c_int)
-            where F: FnMut(i32)
         {
-            let closure = closure as *mut F;
-            (*closure)(mid);
+                        println!("###### {:?}", closure);
+
+            let callbacks: &mut HashMap<String, Box<Fn(i32)>> = mem::transmute(closure);
+            match callbacks.get("on_subscribe") {
+                Some(cb) => cb(mid as i32),
+                _ => panic!("No callback found"),
+            }
         }
     }
 
@@ -249,52 +266,55 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
     }
 
 
-    pub fn onpublish_callback<F>(&self, callback: F)
-        where F: FnMut(i32)
+    pub fn onpublish_callback<F>(&mut self, callback: F)
+        where F: Fn(i32), F: 'static
     {
-
-        let cb = &callback as *const _ as *mut libc::c_void;
+        self.callbacks.insert("on_publish".to_string(), Box::new(callback));
+        let cb = &self.callbacks as *const _ as *mut libc::c_void;
 
         unsafe {
             bindings::mosquitto_user_data_set(self.mosquitto, cb);
-            bindings::mosquitto_publish_callback_set(self.mosquitto, Some(onpublish_wrapper::<F>));
+            bindings::mosquitto_publish_callback_set(self.mosquitto, Some(onpublish_wrapper));
         }
 
-        unsafe extern "C" fn onpublish_wrapper<F>(mqtt: *mut bindings::Struct_mosquitto,
+        unsafe extern "C" fn onpublish_wrapper(mqtt: *mut bindings::Struct_mosquitto,
                                                   closure: *mut libc::c_void,
                                                   mid: libc::c_int)
-            where F: FnMut(i32)
         {
-            let closure = closure as *mut F;
-            (*closure)(mid);
+            let callbacks: &mut HashMap<String, Box<Fn(i32)>> = mem::transmute(closure);
+            match callbacks.get("on_publish") {
+                Some(cb) => cb(mid as i32),
+                _ => panic!("No callback found"),
+            }
         }
     }
 
 
-    pub fn onmesssage_callback<F>(&self, callback: F)
-        where F: FnMut(&str)
-    {
+    // pub fn onmesssage_callback<F>(&self, callback: F)
+    //     where F: Fn(&str), F:'static
+    // {
+    //     self.callbacks.insert("on_message".to_string(), Box::new(callback));
+    //     let cb = &self.callbacks as *const _ as *mut libc::c_void;
+    //     unsafe {
+    //         bindings::mosquitto_user_data_set(self.mosquitto, cb); /* Set our closure as user data */
+    //         bindings::mosquitto_message_callback_set(self.mosquitto, Some(onmessage_wrapper));
+    //     }
 
-        let cb = &callback as *const _ as *mut libc::c_void;
 
-        unsafe {
-            bindings::mosquitto_user_data_set(self.mosquitto, cb); /* Set our closure as user data */
-            bindings::mosquitto_message_callback_set(self.mosquitto, Some(onmessage_wrapper::<F>));
-        }
+    //     unsafe extern "C" fn onmessage_wrapper(mqtt: *mut bindings::Struct_mosquitto, closure: *mut libc::c_void, mqtt_message: *const bindings::Struct_mosquitto_message)
+    //     {
 
+    //         let mqtt_message = (*mqtt_message).payload as *const i8;
+    //         let mqtt_message = CStr::from_ptr(mqtt_message).to_bytes();
+    //         let mqtt_message = std::str::from_utf8(mqtt_message).unwrap();
 
-        unsafe extern "C" fn onmessage_wrapper<F>(mqtt: *mut bindings::Struct_mosquitto, closure: *mut libc::c_void, mqtt_message: *const bindings::Struct_mosquitto_message)
-        where F:FnMut(&str){
-            let closure = closure as *mut F;
-
-            let mqtt_message = (*mqtt_message).payload as *const i8;
-            let mqtt_message = CStr::from_ptr(mqtt_message).to_bytes();
-            let mqtt_message = std::str::from_utf8(mqtt_message).unwrap();
-
-            (*closure)(mqtt_message);
-
-        }
-    }
+    //         let callbacks: &mut HashMap<String, Box<Fn(&str)>> = mem::transmute(closure);
+    //         match callbacks.get("on_publish") {
+    //             Some(cb) => cb(mqtt_message),
+    //             _ => panic!("No callback found"),
+    //         }
+    //     }
+    // }
 
     pub fn loop_forever(&self) {
         unsafe {
