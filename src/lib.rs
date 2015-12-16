@@ -28,22 +28,22 @@ pub enum Qos {
 
 
 
-impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
-
-    pub fn init(){
-        unsafe{
+impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
+    pub fn init() {
+        unsafe {
             bindings::mosquitto_lib_init();
         }
     }
 
-    pub fn cleanup(){
-        unsafe{
+    pub fn cleanup() {
+        unsafe {
             bindings::mosquitto_lib_cleanup();
         }
     }
 
     pub fn new<S>(id: S) -> Client<'b, 'c, 'd>
-    where S: Into<String>{
+        where S: Into<String>
+    {
 
         let mosquitto: *mut bindings::Struct_mosquitto;
         let icallbacks: HashMap<String, Box<Fn(i32)>> = HashMap::new();
@@ -56,14 +56,16 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
             host: None,
             keep_alive: 10,
             clean_session: true,
-            icallbacks: icallbacks,      //integer callbacks
-            scallbacks: scallbacks,      //string callbacks
+            icallbacks: icallbacks, // integer callbacks
+            scallbacks: scallbacks, // string callbacks
             mosquitto: ptr::null_mut(),
         };
 
         let id = CString::new(client.id.clone());
         unsafe {
-            client.mosquitto = bindings::mosquitto_new(id.unwrap().as_ptr(), true as u8, ptr::null_mut());
+            client.mosquitto = bindings::mosquitto_new(id.unwrap().as_ptr(),
+                                                       true as u8,
+                                                       ptr::null_mut());
         }
         client
     }
@@ -168,13 +170,14 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
     // Registered callback is called when the broker sends a CONNACK message in response
     // to a connection. Will be called even incase of failure. All your sub/pub stuff
     // should ideally be done in this callback when connection is successful
-    pub fn onconnect_callback<F>(&mut self, callback:  F)
-        where F: Fn(i32), F: 'static
+    pub fn onconnect_callback<F>(&mut self, callback: F)
+        where F: Fn(i32),
+              F: 'static
     {
         self.icallbacks.insert("on_connect".to_string(), Box::new(callback));
-        //setting client object as userdata. Setting 'callback' as userdata is buggy because by the
-        //time the actual callback is invoked, other callbacks like 'on_subscribe' callback is overwriting
-        //the userdata and wrong closure is getting invoked for on_connect callback
+        // setting client object as userdata. Setting 'callback' as userdata is buggy because by the
+        // time the actual callback is invoked, other callbacks like 'on_subscribe' callback is overwriting
+        // the userdata and wrong closure is getting invoked for on_connect callback
         let cb = self as *const _ as *mut libc::c_void;
         unsafe {
             // Set our closure as user data
@@ -185,9 +188,8 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
 
         // Registered callback. user data is our closure
         unsafe extern "C" fn onconnect_wrapper(mqtt: *mut bindings::Struct_mosquitto,
-                                                  closure: *mut libc::c_void,
-                                                  val: libc::c_int)
-        {
+                                               closure: *mut libc::c_void,
+                                               val: libc::c_int) {
             let client: &mut Client = mem::transmute(closure);
             match client.icallbacks.get("on_connect") {
                 Some(cb) => cb(val as i32),
@@ -215,22 +217,21 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
 
     // Call back that will be called when broker responds to a subscription
     pub fn onsubscribe_callback<F>(&mut self, callback: F)
-        where F: Fn(i32), F:'static
+        where F: Fn(i32),
+              F: 'static
     {
         self.icallbacks.insert("on_subscribe".to_string(), Box::new(callback));
         let cb = self as *const _ as *mut libc::c_void;
         unsafe {
             bindings::mosquitto_user_data_set(self.mosquitto, cb);
-            bindings::mosquitto_subscribe_callback_set(self.mosquitto,
-                                                       Some(onsubscribe_wrapper));
+            bindings::mosquitto_subscribe_callback_set(self.mosquitto, Some(onsubscribe_wrapper));
         }
 
         unsafe extern "C" fn onsubscribe_wrapper(mqtt: *mut bindings::Struct_mosquitto,
-                                                    closure: *mut libc::c_void,
-                                                    mid: libc::c_int,
-                                                    qos_count: libc::c_int,
-                                                    qos_list: *const ::libc::c_int)
-        {
+                                                 closure: *mut libc::c_void,
+                                                 mid: libc::c_int,
+                                                 qos_count: libc::c_int,
+                                                 qos_list: *const ::libc::c_int) {
             let client: &mut Client = mem::transmute(closure);
             match client.icallbacks.get("on_subscribe") {
                 Some(cb) => cb(mid as i32),
@@ -243,7 +244,6 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
     pub fn publish(&self, topic: &str, message: &str, qos: Qos) {
 
         let msg_len = message.len();
-        //
         // CString::new(topic).unwrap().as_ptr() is wrong.
         // topic String gets destroyed and pointer is invalidated
         // Whem message is created, it will allocate to destroyed space of 'topic'
@@ -274,7 +274,8 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
 
 
     pub fn onpublish_callback<F>(&mut self, callback: F)
-        where F: Fn(i32), F: 'static
+        where F: Fn(i32),
+              F: 'static
     {
         self.icallbacks.insert("on_publish".to_string(), Box::new(callback));
         let cb = self as *const _ as *mut libc::c_void;
@@ -285,9 +286,8 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
         }
 
         unsafe extern "C" fn onpublish_wrapper(mqtt: *mut bindings::Struct_mosquitto,
-                                                  closure: *mut libc::c_void,
-                                                  mid: libc::c_int)
-        {
+                                               closure: *mut libc::c_void,
+                                               mid: libc::c_int) {
             let client: &mut Client = mem::transmute(closure);
             match client.icallbacks.get("on_publish") {
                 Some(cb) => cb(mid as i32),
@@ -298,7 +298,8 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
 
 
     pub fn onmesssage_callback<F>(&mut self, callback: F)
-        where F: Fn(&str), F:'static
+        where F: Fn(&str),
+              F: 'static
     {
         self.scallbacks.insert("on_message".to_string(), Box::new(callback));
         let cb = self as *const _ as *mut libc::c_void;
@@ -331,11 +332,11 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd>{
 }
 
 
-impl<'b, 'c, 'd> Drop for Client<'b, 'c, 'd>{
+impl<'b, 'c, 'd> Drop for Client<'b, 'c, 'd> {
     fn drop(&mut self) {
         unsafe {
             bindings::mosquitto_destroy(self.mosquitto);
-            //bindings::mosquitto_lib_cleanup();
+            // bindings::mosquitto_lib_cleanup();
         }
     }
 }
