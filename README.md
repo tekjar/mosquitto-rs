@@ -6,9 +6,18 @@ Rust bindings and wrappers for mosquitto mqtt client library
 ---
 
 #####UBUNTU
+
 * apt-get install libc-ares-dev libssl-dev libwrap0-dev uthash-dev uuid-dev
 * cargo build
-* 
+
+#####YOCTO
+
+Get the sources and
+
+* opkg install libcares-dev openssl-dev
+* make && make install
+* copy libmosquitto.so in /usr/lib
+
 
 ###API USAGE EXAMPLES
 ---
