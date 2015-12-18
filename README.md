@@ -16,7 +16,6 @@ Get the sources and
 
 * opkg install libcares-dev openssl-dev
 * make && make install
-* copy libmosquitto.so in /usr/lib
 
 
 ###API USAGE EXAMPLES
