@@ -62,8 +62,9 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         };
 
         let id = CString::new(client.id.clone());
+        //TODO: Replace all 'unwrap().as_ptr() as *const _' with 'unwrap().as_ptr()' in rust 1.6
         unsafe {
-            client.mosquitto = bindings::mosquitto_new(id.unwrap().as_ptr(),
+            client.mosquitto = bindings::mosquitto_new(id.unwrap().as_ptr() as *const _,
                                                        true as u8,
                                                        ptr::null_mut());
         }
@@ -93,7 +94,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                 let id = CString::new(id);
 
                 bindings::mosquitto_reinitialise(self.mosquitto,
-                                                 id.unwrap().as_ptr(),
+                                                 id.unwrap().as_ptr() as *const _,
                                                  clean as u8,
                                                  ptr::null_mut());
             }
@@ -111,7 +112,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         unsafe {
             // Publish will with Qos 2
             bindings::mosquitto_will_set(self.mosquitto,
-                                         topic.unwrap().as_ptr(),
+                                         topic.unwrap().as_ptr() as *const _,
                                          msg_len as i32,
                                          message.unwrap().as_ptr() as *mut libc::c_void,
                                          2,
@@ -141,8 +142,8 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                         pwd = CString::new(password);
                         unsafe {
                             bindings::mosquitto_username_pw_set(self.mosquitto,
-                                                                u_name.unwrap().as_ptr(),
-                                                                pwd.unwrap().as_ptr());
+                                                                u_name.unwrap().as_ptr() as *const _,
+                                                                pwd.unwrap().as_ptr() as *const _);
                         }
                     }
                     None => (),
@@ -155,7 +156,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         // Connect to broker
         unsafe {
             n_ret = bindings::mosquitto_connect(self.mosquitto,
-                                                host.unwrap().as_ptr(),
+                                                host.unwrap().as_ptr() as *const _,
                                                 1883,
                                                 self.keep_alive);
             if n_ret == 0 {
@@ -210,7 +211,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         unsafe {
             bindings::mosquitto_subscribe(self.mosquitto,
                                           ptr::null_mut(),
-                                          topic.unwrap().as_ptr(),
+                                          topic.unwrap().as_ptr() as *const _,
                                           qos);
         }
     }
@@ -264,7 +265,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         unsafe {
             bindings::mosquitto_publish(self.mosquitto,
                                         ptr::null_mut(),
-                                        topic.unwrap().as_ptr(),
+                                        topic.unwrap().as_ptr() as *const _,
                                         msg_len as i32,
                                         message.unwrap().as_ptr() as *mut libc::c_void,
                                         qos,
