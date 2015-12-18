@@ -1,6 +1,17 @@
-# mosquitto-rs
+#mosquitto-rs
 
-Rust bindings for mosquitto mqtt client library
+Rust bindings and wrappers for mosquitto mqtt client library
+
+###HOW TO BUILD
+---
+
+#####UBUNTU
+* apt-get install libc-ares-dev libssl-dev libwrap0-dev uthash-dev uuid-dev
+* cargo build
+* 
+
+###API USAGE EXAMPLES
+---
 
 ####Create a client
 
