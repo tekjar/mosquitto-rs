@@ -27,7 +27,6 @@ pub enum Qos {
 }
 
 
-
 impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     pub fn init() {
         unsafe {
@@ -41,10 +40,10 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         }
     }
 
+
     pub fn new<S>(id: S) -> Client<'b, 'c, 'd>
         where S: Into<String>
     {
-
         let mosquitto: *mut bindings::Struct_mosquitto;
         let icallbacks: HashMap<String, Box<Fn(i32)>> = HashMap::new();
         let scallbacks: HashMap<String, Box<Fn(&str)>> = HashMap::new();
@@ -62,7 +61,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         };
 
         let id = CString::new(client.id.clone());
-        //TODO: Replace all 'unwrap().as_ptr() as *const _' with 'unwrap().as_ptr()' in rust 1.6
+        // TODO: Replace all 'unwrap().as_ptr() as *const _' with 'unwrap().as_ptr()' in rust 1.6
         unsafe {
             client.mosquitto = bindings::mosquitto_new(id.unwrap().as_ptr() as *const _,
                                                        true as u8,
@@ -84,7 +83,6 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
 
     pub fn clean_session(mut self, clean: bool) -> Self {
         self.clean_session = clean;
-
 
         // Reinitialise the client if clean_session is changed to false
         if clean == false {
@@ -242,9 +240,10 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     }
 
 
-    pub fn publish(&self, topic: &str, message: &str, qos: Qos) {
+    pub fn publish<S>(&self, topic: S, message: S, qos: Qos)
+        where S: Into<String>
+    {
 
-        let msg_len = message.len();
         // CString::new(topic).unwrap().as_ptr() is wrong.
         // topic String gets destroyed and pointer is invalidated
         // Whem message is created, it will allocate to destroyed space of 'topic'
@@ -253,8 +252,15 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         // Try let topic = CString::new(topic).unwrap().as_ptr(); instead of let topic = CString::new(topic)
         //
 
-        let topic = CString::new(topic);
-        let message = CString::new(message);
+        // If inputs are of type &str, Convert them to String
+        let message = message.into();
+        let topic = topic.into();
+
+        let msg_len = message.len();
+
+        let topic = CString::new(topic.clone());
+        let message = CString::new(message.clone());
+
 
         let qos = match qos {
             Qos::AtMostOnce => 0,
@@ -337,7 +343,6 @@ impl<'b, 'c, 'd> Drop for Client<'b, 'c, 'd> {
     fn drop(&mut self) {
         unsafe {
             bindings::mosquitto_destroy(self.mosquitto);
-            // bindings::mosquitto_lib_cleanup();
         }
     }
 }
