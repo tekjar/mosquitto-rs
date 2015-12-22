@@ -333,7 +333,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
 
     pub fn loop_forever(&self) {
         unsafe {
-            bindings::mosquitto_loop_forever(self.mosquitto, 1000, 1000);
+            bindings::mosquitto_loop_forever(self.mosquitto, 2000, 1);
         }
     }
 }
