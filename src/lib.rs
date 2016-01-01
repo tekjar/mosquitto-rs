@@ -240,8 +240,9 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     }
 
 
-    pub fn publish<S>(&self, topic: S, message: S, qos: Qos)
-        where S: Into<String>
+    pub fn publish<S1, S2>(&self, topic: S1, message: S2, qos: Qos)
+        where S1: Into<String>,
+              S2: Into<String>
     {
 
         // CString::new(topic).unwrap().as_ptr() is wrong.

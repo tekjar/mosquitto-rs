@@ -1,17 +1,30 @@
 extern crate mosquitto;
+
 use mosquitto::{Client, Qos};
+use std::thread;
+use std::time::Duration;
 
-// The linked code creates a client that connects to a broker at
-// localhost:1883, subscribes to the topics "tick", "control".
-// When received a message on 'tick', it'll be forwarded to tock
-//
+///#TESTCASES TO CHECK 
+///
+///- [ ] Clent ram persistence. When broker goes down, client should keep track of all its publishes (with QoS 1,2)
+///- [ ] Client disk persistance. Broker went down/ Scooter internet down. Client crashed. Broker up. Client up. 
+///      Now client should resend all the publishes after broker crash - before client crash.
+///- [ ] Broker ram persistence. Broker should save messages that are supposed to be sent to disconnected persistent clients
+///      (one's connected with clean_session = false).
+///- [ ] Broker disk persistence. If broker went down before publishing all the messages (let's say a persisent client 
+///      which is supposed to receive the publish is down), it should retry sending that message when it is back up again. 
+///      I.e all the broker state should be written to permanent storage
+///		 Disconnect client, publish message, disconnect broker, connect broker, connect client.
+///      Check is there is a way to periodically update the disk database incase of unexpected broker crashes.
+///- [ ] Broker should remember client subscriptions for persistent clients (clean_session = false)even after disconnections 
+///      and should directly handle publishes to them after reconnections. 
+///      Disconnect and connect back broker and see if subscriptions persist. 
+///      Note: Set 'persist = true' in mosquitto.conf
+///- [ ] Disconnection handling. If broker goes down, client should reconnect automatically when broker comes up
+///- [ ] Reconnection handling when both broker and client are crashed.
 
-// 1. Start the broker --> mosquitto -c /etc/mosquitto/mosquitto.conf -d
-// 2. cargo run
-// 3. mosquitto_sub -t "tock"
-// 4. mosquitto_pub -t "tick" -m "Hello World"
-// 5. mosquitto_pub -t "control" -m "halt" --> stop
-//
+
+
 
 // TODO: Check why cargo test some times is not waiting at loop_forever()
 // #[test]
@@ -78,14 +91,21 @@ fn all_ok() {
     Client::cleanup();
 }
 
-
+///###ANALYSIS
+/// -[X] Auto reconnect working
+///	
+/// -[X] Client RAM persistance working
+/// Testcase: All the scooter clients will start publishing and AWS client receives it. 
+///           At some point in between, broker goes down and hence AWS client will stop receiving
+///           AWS client should receive all the messages when broker comes up again. Total count should be = 100
+///            
 #[test]
 fn client_persistance() {
     let client_test = Client::new("test").keep_alive(30).clean_session(true);
 
     let mut clients: Vec<Client> = vec![];
 
-    for i in 0..1000 {
+    for i in 0..10 {
         let id = format!("client-{}", i);
         let mut client = Client::new(id)
                              .keep_alive(5)
@@ -94,17 +114,33 @@ fn client_persistance() {
         clients.push(client);
     }
 
+    // for client in clients.iter_mut() {
+    //     client.onconnect_callback(move |a: i32| {
+    //         println!("@@@ {} - On connect callback {} @@@", &client.id, a);
+    //     });
+    // }
+
     for client in clients.iter_mut() {
-        match client.connect("ec2-52-77-220-182.ap-southeast-1.compute.amazonaws.com") {
+        match client.connect("localhost") {
             Ok(_) => println!("Connection successful --> {:?}", client.id),
             Err(n) => panic!("Connection error = {:?}", n),
+        }
+    }
+
+    let mut count = 0;
+    for client in clients.iter_mut() {
+        for i in 0..10 {
+            thread::sleep(Duration::from_millis(100));
+            let message = format!("{}...{:?} - Message {}", count, client.id, i);
+            client.publish("hello/world", message, Qos::AtLeastOnce);
+            count += 1;
         }
     }
 
     client_test.loop_forever();
 }
 
-#[test]
+// #[test]
 fn idle_connect() {
     Client::init();
     let id_prefix: String = "ath".to_string();
