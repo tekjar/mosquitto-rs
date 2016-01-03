@@ -31,7 +31,6 @@ use std::time::Duration;
 fn all_ok() {
     // Client::init();
     // Set before connect
-
     let client = Client::new("test").keep_alive(30).clean_session(true).auth("root", "admin");
 
     let mut clients: Vec<Client> = vec![];

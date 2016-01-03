@@ -221,6 +221,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     {
         self.icallbacks.insert("on_subscribe".to_string(), Box::new(callback));
         let cb = self as *const _ as *mut libc::c_void;
+
         unsafe {
             bindings::mosquitto_user_data_set(self.mosquitto, cb);
             bindings::mosquitto_subscribe_callback_set(self.mosquitto, Some(onsubscribe_wrapper));
@@ -257,11 +258,12 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         let message = message.into();
         let topic = topic.into();
 
+
+
         let msg_len = message.len();
 
         let topic = CString::new(topic.clone());
         let message = CString::new(message.clone());
-
 
         let qos = match qos {
             Qos::AtMostOnce => 0,
