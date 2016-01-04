@@ -81,3 +81,7 @@ client.onmesssage_callback(|s|{
                             });
 ```
 
+####EXTENDING THE MOSQUITTO BROKER FOR 100 THOUSAND CONNECTIONS
+---
+
+check [this](https://lists.launchpad.net/mosquitto-users/msg00163.html)
