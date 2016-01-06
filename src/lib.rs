@@ -158,6 +158,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                                                 1883,
                                                 self.keep_alive);
             if n_ret == 0 {
+                // TODO: What if mqtt connection is unsuccesfull which can only be known in connect callback. Maybe pass this to callback
                 bindings::mosquitto_loop_start(self.mosquitto);
                 Ok(self)
             } else {
@@ -240,7 +241,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         }
     }
 
-
+    // TODO: Convert Into<String> to &str
     pub fn publish<S1, S2>(&self, topic: S1, message: S2, qos: Qos)
         where S1: Into<String>,
               S2: Into<String>
