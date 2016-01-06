@@ -3,7 +3,7 @@ extern crate c_sources as bindings;
 
 use std::ptr;
 use std::mem;
-use std::ffi::{CString, CStr};
+use std::ffi::{CString, CStr, NulError};
 use std::collections::HashMap;
 
 // #[derive(Default)]
@@ -120,6 +120,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
 
     }
 
+
     pub fn connect(&mut self, host: &'d str) -> Result<&Self, i32> {
 
         self.host = Some(host);
@@ -152,10 +153,11 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         }
 
         // Connect to broker
+        // TODO: Take optional port number as input
         unsafe {
             n_ret = bindings::mosquitto_connect(self.mosquitto,
                                                 host.unwrap().as_ptr() as *const _,
-                                                1883,
+                                                8883,
                                                 self.keep_alive);
             if n_ret == 0 {
                 // TODO: What if mqtt connection is unsuccesfull which can only be known in connect callback. Maybe pass this to callback
@@ -166,6 +168,46 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
             }
         }
     }
+
+    // TODO: Remove all the unwraps and panics from the code
+    pub fn secure_connect(&mut self,
+                          host: &'d str,
+                          ca_cert: &str,
+                          client_cert: Option<(&str, &str)>)
+                          -> Result<&Self, i32> {
+
+        let c_host = CString::new(host);
+        let c_ca_cert = CString::new(ca_cert);
+        let c_client_cert: Result<CString, NulError>;
+        let c_client_key: Result<CString, NulError>;
+
+        match client_cert {
+            Some((cert, key)) => {
+                c_client_cert = CString::new(cert);
+                c_client_key = CString::new(key);
+
+                unsafe {
+                    bindings::mosquitto_tls_set(self.mosquitto,
+                                                c_ca_cert.unwrap().as_ptr() as *const _,
+                                                ptr::null_mut(),
+                                                c_client_cert.unwrap().as_ptr() as *const _,
+                                                c_client_key.unwrap().as_ptr() as *const _,
+                                                None);
+                }
+            }
+            None => unsafe {
+                bindings::mosquitto_tls_set(self.mosquitto,
+                                            c_ca_cert.unwrap().as_ptr() as *const _,
+                                            ptr::null_mut(),
+                                            ptr::null_mut(),
+                                            ptr::null_mut(),
+                                            None);
+            },
+        }
+
+        self.connect(host)
+    }
+
 
     // Registered callback is called when the broker sends a CONNACK message in response
     // to a connection. Will be called even incase of failure. All your sub/pub stuff

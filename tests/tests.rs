@@ -14,7 +14,7 @@ use std::time::Duration;
 ///- [ ] Broker disk persistence. If broker went down before publishing all the messages (let's say a persisent client 
 ///      which is supposed to receive the publish is down), it should retry sending that message when it is back up again. 
 ///      I.e all the broker state should be written to permanent storage
-///		 Disconnect client, publish message, disconnect broker, connect broker, connect client.
+///      Disconnect client, publish message, disconnect broker, connect broker, connect client.
 ///      Check is there is a way to periodically update the disk database incase of unexpected broker crashes.
 ///- [ ] Broker should remember client subscriptions for persistent clients (clean_session = false)even after disconnections 
 ///      and should directly handle publishes to them after reconnections. 
@@ -92,7 +92,7 @@ fn all_ok() {
 
 ///###ANALYSIS
 /// -[X] Auto reconnect working
-///	
+/// 
 /// -[X] Client RAM persistance working
 /// Testcase: All the scooter clients will start publishing and AWS client receives it. 
 ///           At some point in between, broker goes down and hence AWS client will stop receiving
@@ -121,6 +121,16 @@ fn client_persistance() {
 
     for client in clients.iter_mut() {
         match client.connect("localhost") {
+            Ok(_) => println!("Connection successful --> {:?}", client.id),
+            Err(n) => panic!("Connection error = {:?}", n),
+        }
+    }
+
+
+    for client in clients.iter_mut() {
+        match client.secure_connect("localhost",
+                                    "./ca.crt",
+                                    Some(("./client.crt", "./client.key"))) {
             Ok(_) => println!("Connection successful --> {:?}", client.id),
             Err(n) => panic!("Connection error = {:?}", n),
         }
