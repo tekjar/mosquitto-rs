@@ -119,18 +119,18 @@ fn client_persistance() {
     //     });
     // }
 
-    for client in clients.iter_mut() {
-        match client.connect("localhost") {
-            Ok(_) => println!("Connection successful --> {:?}", client.id),
-            Err(n) => panic!("Connection error = {:?}", n),
-        }
-    }
-
+    // for client in clients.iter_mut() {
+    //     match client.connect("localhost") {
+    //         Ok(_) => println!("Connection successful --> {:?}", client.id),
+    //         Err(n) => panic!("Connection error = {:?}", n),
+    //     }
+    // }
 
     for client in clients.iter_mut() {
         match client.secure_connect("localhost",
                                     "./ca.crt",
-                                    Some(("./client.crt", "./client.key"))) {
+                                    Some(("/home/raviteja/Desktop/certs/client/client.crt",
+                                          "/home/raviteja/Desktop/certs/client/client.key"))) {
             Ok(_) => println!("Connection successful --> {:?}", client.id),
             Err(n) => panic!("Connection error = {:?}", n),
         }
@@ -141,7 +141,7 @@ fn client_persistance() {
         for i in 0..10 {
             thread::sleep(Duration::from_millis(100));
             let message = format!("{}...{:?} - Message {}", count, client.id, i);
-            client.publish("hello/world", message, Qos::AtLeastOnce);
+            client.publish("ather/log-ship", message, Qos::AtLeastOnce);
             count += 1;
         }
     }

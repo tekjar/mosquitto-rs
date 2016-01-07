@@ -157,7 +157,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         unsafe {
             n_ret = bindings::mosquitto_connect(self.mosquitto,
                                                 host.unwrap().as_ptr() as *const _,
-                                                8883,
+                                                1883,
                                                 self.keep_alive);
             if n_ret == 0 {
                 // TODO: What if mqtt connection is unsuccesfull which can only be known in connect callback. Maybe pass this to callback
@@ -187,21 +187,31 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                 c_client_key = CString::new(key);
 
                 unsafe {
-                    bindings::mosquitto_tls_set(self.mosquitto,
-                                                c_ca_cert.unwrap().as_ptr() as *const _,
-                                                ptr::null_mut(),
-                                                c_client_cert.unwrap().as_ptr() as *const _,
-                                                c_client_key.unwrap().as_ptr() as *const _,
-                                                None);
+                    let tls_ret =
+                        bindings::mosquitto_tls_set(self.mosquitto,
+                                                    c_ca_cert.unwrap().as_ptr() as *const _,
+                                                    ptr::null_mut(),
+                                                    c_client_cert.unwrap().as_ptr() as *const _,
+                                                    c_client_key.unwrap().as_ptr() as *const _,
+                                                    None);
+
+                    if tls_ret != 0 {
+                        println!("1. TLS set failed. Connecting with out encryption");
+                    }
+
                 }
             }
             None => unsafe {
-                bindings::mosquitto_tls_set(self.mosquitto,
-                                            c_ca_cert.unwrap().as_ptr() as *const _,
-                                            ptr::null_mut(),
-                                            ptr::null_mut(),
-                                            ptr::null_mut(),
-                                            None);
+                let tls_ret = bindings::mosquitto_tls_set(self.mosquitto,
+                                                          c_ca_cert.unwrap().as_ptr() as *const _,
+                                                          ptr::null_mut(),
+                                                          ptr::null_mut(),
+                                                          ptr::null_mut(),
+                                                          None);
+
+                if tls_ret != 0 {
+                    println!("2. TLS set failed. Connecting with out encryption");
+                }
             },
         }
 
