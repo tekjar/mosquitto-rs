@@ -6,6 +6,15 @@ use std::mem;
 use std::ffi::{CString, CStr, NulError};
 use std::collections::HashMap;
 
+#[macro_use]
+extern crate lazy_static;
+use std::sync::Mutex;
+
+lazy_static! {
+    static ref INSTANCES: Mutex<usize> = Mutex::new(0);
+}
+
+
 // #[derive(Default)]
 // #[derive(Debug)]
 pub struct Client<'b, 'c, 'd> {
@@ -27,79 +36,65 @@ pub enum Qos {
 }
 
 
+pub fn cleanup() {
+    unsafe {
+        bindings::mosquitto_lib_cleanup();
+    }
+}
+
+// TODO: Call mosquitto::cleanup() at the end
 impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
-    pub fn init() {
-        unsafe {
-            bindings::mosquitto_lib_init();
-        }
-    }
-
-    pub fn cleanup() {
-        unsafe {
-            bindings::mosquitto_lib_cleanup();
-        }
-    }
-
-
-    pub fn new<S>(id: S) -> Client<'b, 'c, 'd>
-        where S: Into<String>
-    {
+    pub fn new(id: &str, clean: bool) -> Result<Client<'b, 'c, 'd>, i32> {
         let mosquitto: *mut bindings::Struct_mosquitto;
         let icallbacks: HashMap<String, Box<Fn(i32)>> = HashMap::new();
         let scallbacks: HashMap<String, Box<Fn(&str)>> = HashMap::new();
 
         let mut client = Client {
-            id: id.into(),
+            id: id.to_string(),
             user_name: None,
             password: None,
             host: None,
             keep_alive: 10,
-            clean_session: true,
+            clean_session: clean,
             icallbacks: icallbacks, // integer callbacks
             scallbacks: scallbacks, // string callbacks
             mosquitto: ptr::null_mut(),
         };
 
-        let id = CString::new(client.id.clone());
+        let id = CString::new(id);
+
         // TODO: Replace all 'unwrap().as_ptr() as *const _' with 'unwrap().as_ptr()' in rust 1.6
         unsafe {
             client.mosquitto = bindings::mosquitto_new(id.unwrap().as_ptr() as *const _,
-                                                       true as u8,
+                                                       clean as u8,
                                                        ptr::null_mut());
         }
-        client
+
+        if client.mosquitto != ptr::null_mut() {
+
+            let mut instances = INSTANCES.lock().unwrap();
+            *instances += 1;
+            println!("instances = {:?}", *instances);
+            if *instances == 1 {
+                unsafe {
+                    println!("@@@ Initializing mosquitto library @@@");
+                    bindings::mosquitto_lib_init();
+                }
+            }
+
+
+            Ok(client)
+        } else {
+            Err(-1)
+        }
     }
 
-    pub fn auth(mut self, user_name: &'b str, password: &'c str) -> Self {
-        self.user_name = Some(user_name);
-        self.password = Some(password);
-        self
-    }
 
     pub fn keep_alive(mut self, keepalive: i32) -> Self {
         self.keep_alive = keepalive;
         self
     }
 
-    pub fn clean_session(mut self, clean: bool) -> Self {
-        self.clean_session = clean;
-
-        // Reinitialise the client if clean_session is changed to false
-        if clean == false {
-
-            unsafe {
-                let id = self.id.clone();
-                let id = CString::new(id);
-
-                bindings::mosquitto_reinitialise(self.mosquitto,
-                                                 id.unwrap().as_ptr() as *const _,
-                                                 clean as u8,
-                                                 ptr::null_mut());
-            }
-        }
-
-        self
-    }
 
     pub fn will(self, topic: &str, message: &str) -> Self {
 
@@ -128,36 +123,12 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         let host = CString::new(host);
 
         let n_ret;
-        let u_name;
-        let pwd;
-
-        // Set username and password before connecting
-        match self.user_name {
-            Some(user_name) => {
-                u_name = CString::new(user_name);
-                match self.password {
-                    Some(password) => {
-                        println!("user_name = {:?}, password = {:?}", user_name, password);
-                        pwd = CString::new(password);
-                        unsafe {
-                            bindings::mosquitto_username_pw_set(self.mosquitto,
-                                                                u_name.unwrap().as_ptr() as *const _,
-                                                                pwd.unwrap().as_ptr() as *const _);
-                        }
-                    }
-                    None => (),
-                }
-
-            }
-            None => (),
-        }
-
         // Connect to broker
-        // TODO: Take optional port number as input
+        // TODO: Take optional port number in the string and split it
         unsafe {
             n_ret = bindings::mosquitto_connect(self.mosquitto,
                                                 host.unwrap().as_ptr() as *const _,
-                                                1883,
+                                                8884,
                                                 self.keep_alive);
             if n_ret == 0 {
                 // TODO: What if mqtt connection is unsuccesfull which can only be known in connect callback. Maybe pass this to callback
@@ -181,41 +152,47 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         let c_client_cert: Result<CString, NulError>;
         let c_client_key: Result<CString, NulError>;
 
+        let tls_ret: i32;
         match client_cert {
             Some((cert, key)) => {
                 c_client_cert = CString::new(cert);
                 c_client_key = CString::new(key);
-
                 unsafe {
-                    let tls_ret =
-                        bindings::mosquitto_tls_set(self.mosquitto,
-                                                    c_ca_cert.unwrap().as_ptr() as *const _,
-                                                    ptr::null_mut(),
-                                                    c_client_cert.unwrap().as_ptr() as *const _,
-                                                    c_client_key.unwrap().as_ptr() as *const _,
-                                                    None);
-
-                    if tls_ret != 0 {
-                        println!("1. TLS set failed. Connecting with out encryption");
-                    }
-
+                    bindings::mosquitto_tls_insecure_set(self.mosquitto, 1 as u8);
+                    tls_ret = bindings::mosquitto_tls_set(self.mosquitto,
+                                                          c_ca_cert.unwrap().as_ptr(),
+                                                          ptr::null_mut(),
+                                                          c_client_cert.unwrap().as_ptr(),
+                                                          c_client_key.unwrap().as_ptr(),
+                                                          None);
                 }
+
+                if tls_ret != 0 {
+                    cleanup();
+                    Err(tls_ret)
+                } else {
+                    self.connect(host)
+                }
+
             }
-            None => unsafe {
-                let tls_ret = bindings::mosquitto_tls_set(self.mosquitto,
+            None => {
+                unsafe {
+                    tls_ret = bindings::mosquitto_tls_set(self.mosquitto,
                                                           c_ca_cert.unwrap().as_ptr() as *const _,
                                                           ptr::null_mut(),
                                                           ptr::null_mut(),
                                                           ptr::null_mut(),
                                                           None);
+                }
 
                 if tls_ret != 0 {
-                    println!("2. TLS set failed. Connecting with out encryption");
+                    cleanup();
+                    Err(tls_ret)
+                } else {
+                    self.connect(host)
                 }
-            },
+            }
         }
-
-        self.connect(host)
     }
 
 
@@ -294,10 +271,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     }
 
     // TODO: Convert Into<String> to &str
-    pub fn publish<S1, S2>(&self, topic: S1, message: S2, qos: Qos)
-        where S1: Into<String>,
-              S2: Into<String>
-    {
+    pub fn publish(&self, topic: &str, message: &str, qos: Qos) {
 
         // CString::new(topic).unwrap().as_ptr() is wrong.
         // topic String gets destroyed and pointer is invalidated
@@ -307,16 +281,15 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         // Try let topic = CString::new(topic).unwrap().as_ptr(); instead of let topic = CString::new(topic)
         //
 
+
         // If inputs are of type &str, Convert them to String
-        let message = message.into();
-        let topic = topic.into();
-
-
+        // let message = message.into();
+        // let topic = topic.into();
 
         let msg_len = message.len();
 
-        let topic = CString::new(topic.clone());
-        let message = CString::new(message.clone());
+        let topic = CString::new(topic);
+        let message = CString::new(message);
 
         let qos = match qos {
             Qos::AtMostOnce => 0,
@@ -397,8 +370,30 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
 
 impl<'b, 'c, 'd> Drop for Client<'b, 'c, 'd> {
     fn drop(&mut self) {
+
         unsafe {
             bindings::mosquitto_destroy(self.mosquitto);
         }
+
+        let mut instances = INSTANCES.lock().unwrap();
+        println!("instances = {:?}", *instances);
+        *instances -= 1;
+
+
+        if *instances == 0 {
+            println!("@@@ All clients dead. Cleaning mosquitto library @@@");
+            unsafe {
+                bindings::mosquitto_lib_cleanup();
+            }
+        }
     }
 }
+
+// NOTE:
+// mosquitto_lib_init() calls everything that is needed by the internals of the library.
+// If you're on Windows nothing will work without it for example.
+// On linux, for TLS, mosquitto_lib_init() is necessary.
+// Multiple calls - it depends whether anything else is using the same libraries (e.g. openssl).
+// If you call lib_cleanup() then everything using openssl will stop working.
+// So don't call it at destruction of each client
+//

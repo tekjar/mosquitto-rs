@@ -1,34 +1,37 @@
 extern crate pkg_config;
-use std::{env,fs};
+use std::{env, fs};
 use std::path::PathBuf;
-use std::process::{Command,Stdio};
+use std::process::{Command, Stdio};
 
 fn main() {
 
-    //let target = PathBuf::from(&env::var("TARGET").unwrap());
+    // let target = PathBuf::from(&env::var("TARGET").unwrap());
     let current_dir = PathBuf::from(&env::current_dir().unwrap());
     let out_dir = PathBuf::from(&env::var_os("OUT_DIR").unwrap());
 
     let src_dir = current_dir.join("mosquitto-1.4.5");
 
-    match pkg_config::find_library("libmosquitto") {
-        Ok(_) => return,
-        Err(e) => println!("Couldn't find mosquitto from pkgconfig ({:?}), compiling it from source...", e),
-    }
+    // match pkg_config::find_library("mosquitto") {
+    //     Ok(_) => return,
+    //     Err(e) => {
+    //         panic!("Couldn't find mosquitto {:?}), install mosquitto first...",
+    //                e)
+    //     }
+    // }
 
 
-    run(Command::new("make")
-                .current_dir(&src_dir)
-                .env("DESTDIR", &out_dir));
+    // run(Command::new("make")
+    //             .current_dir(&src_dir)
+    //             .env("DESTDIR", &out_dir));
 
-    fs::copy(&src_dir.join("lib/libmosquitto.so.1"), &out_dir.join("libmosquitto.so")).unwrap();
+    // fs::copy(&src_dir.join("lib/libmosquitto.so.1"), &out_dir.join("libmosquitto.so")).unwrap();
 
-    //panic!("{:?}, {:?}", out_dir.display(), current_dir.display());
+    // //panic!("{:?}, {:?}", out_dir.display(), current_dir.display());
 
     println!("cargo:rustc-flags=-L {:?} -l mosquitto", out_dir.display());
-    //println!("cargo:rustc-link-search=native={}", out_dir.display());
-    //println!("cargo:rustc-link-lib=static=mosquitto");
-    println!("cargo:root={:?}", out_dir.display());
+    println!("cargo:rustc-link-search=native={}", out_dir.display());
+    // //println!("cargo:rustc-link-lib=static=mosquitto");
+    // println!("cargo:root={:?}", out_dir.display());
 }
 
 fn run(cmd: &mut Command) {
@@ -40,4 +43,3 @@ fn run(cmd: &mut Command) {
                .success());
 
 }
-

@@ -1,9 +1,10 @@
 [package]
-name = "mosquitto"
-version = "0.1.0"
 authors = ["RTR <k.teza1@gmail.com>"]
+name = "mosquitto"
+version = "0.3.0"
 
 [dependencies]
+lazy_static = "*"
 libc = "*"
 
 [dependencies.c_sources]

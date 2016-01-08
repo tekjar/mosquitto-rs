@@ -21,11 +21,12 @@ Get the sources and
 
 * Generate ca, server, client certificates using the guide [here](http://rockingdlabs.dunmire.org/exercises-experiments/ssl-client-certs-to-secure-mqtt)
 
-NOTE: port 8883 isn't working. checkout why
-
-* Use the below command to verify your connection
+* Use the below commands to verify your connection
 ```
-sudo openssl s_client -connect localhost:1883 -CAfile ./ca.crt -cert client/client.crt -key client/client.key
+sudo openssl s_client -connect localhost:8884 -CAfile ./ca.crt -cert client.crt -key client.key
+```
+```
+mosquitto_sub -t "ather/log-ship" -v --cafile ca.crt --cert client.crt --key client.key -p 8884
 ```
 
 
