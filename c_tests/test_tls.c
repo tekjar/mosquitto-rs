@@ -53,6 +53,8 @@ int main(){
 		perror("");
 		exit(2);
 	}
-
-	mosquitto_loop_forever(m, -1, 1);
+	
+	//mosquitto_loop_forever(m, -1, 1);
+	mosquitto_destroy(m);
+	mosquitto_lib_cleanup();
 }

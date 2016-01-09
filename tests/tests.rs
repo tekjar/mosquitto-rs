@@ -94,8 +94,6 @@ use std::time::Duration;
 ///            
 #[test]
 fn client_persistance() {
-    let client_test = Client::new("test", true).unwrap().keep_alive(30);
-
     let mut clients: Vec<Client> = vec![];
 
     for i in 0..10 {
@@ -107,14 +105,14 @@ fn client_persistance() {
         clients.push(client);
     }
 
-    // for client in clients.iter_mut() {
-    //     client.onconnect_callback(move |a: i32| {
-    //         println!("@@@ {} - On connect callback {} @@@", &client.id, a);
-    //     });
-    // }
+    for client in clients.iter_mut() {
+        client.onconnect_callback(move |a: i32| {
+            println!("@@@ connect callback ret = {} @@@", a);
+        });
+    }
 
     // for client in clients.iter_mut() {
-    //     match client.connect("localhost") {
+    //     match client.connect("ec2-52-77-220-182.ap-southeast-1.compute.amazonaws.com") {
     //         Ok(_) => println!("Connection successful --> {:?}", client.id),
     //         Err(n) => panic!("Connection error = {:?}", n),
     //     }
@@ -133,38 +131,36 @@ fn client_persistance() {
     let mut count = 0;
     for client in clients.iter_mut() {
         for i in 0..10 {
-            thread::sleep(Duration::from_millis(100));
+            // thread::sleep(Duration::from_millis(100));
             let message = format!("{}...{:?} - Message {}", count, client.id, i);
             client.publish("ather/log-ship", &message, Qos::AtLeastOnce);
             count += 1;
         }
     }
-
-
-    // client_test.loop_forever();
+    thread::sleep(Duration::from_millis(100));
 }
 
-// #[test]
-fn idle_connect() {
-    let id_prefix: String = "ath".to_string();
-    let mut clients: Vec<Client> = Vec::new();
+// // #[test]
+// fn idle_connect() {
+//     let id_prefix: String = "ath".to_string();
+//     let mut clients: Vec<Client> = Vec::new();
 
-    for i in 0..10 {
-        let id = format!("{}-{}", id_prefix, i);
-        // println!("{:?}", id);
-        let mut client = Client::new(&id, true)
-                             .unwrap()
-                             .keep_alive(30)
-                             .will("goodbye", "my last words");
-        clients.push(client);
-        match clients[i].connect("ec2-52-77-220-182.ap-southeast-1.compute.amazonaws.com") {
-            Ok(_) => println!("Connection successful --> {:?}", "client"),
-            Err(n) => panic!("Connection error = {:?}", n),
-        }
-    }
-    clients[0].loop_forever();
-    mosquitto::cleanup();
-}
+//     for i in 0..10 {
+//         let id = format!("{}-{}", id_prefix, i);
+//         // println!("{:?}", id);
+//         let mut client = Client::new(&id, true)
+//                              .unwrap()
+//                              .keep_alive(30)
+//                              .will("goodbye", "my last words");
+//         clients.push(client);
+//         match clients[i].connect("ec2-52-77-220-182.ap-southeast-1.compute.amazonaws.com") {
+//             Ok(_) => println!("Connection successful --> {:?}", "client"),
+//             Err(n) => panic!("Connection error = {:?}", n),
+//         }
+//     }
+//     clients[0].loop_forever();
+//     mosquitto::cleanup();
+// }
 
 
 // /************************ Stress observations **************************

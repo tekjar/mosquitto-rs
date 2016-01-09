@@ -42,10 +42,8 @@ pub fn cleanup() {
     }
 }
 
-// TODO: Call mosquitto::cleanup() at the end
 impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     pub fn new(id: &str, clean: bool) -> Result<Client<'b, 'c, 'd>, i32> {
-        let mosquitto: *mut bindings::Struct_mosquitto;
         let icallbacks: HashMap<String, Box<Fn(i32)>> = HashMap::new();
         let scallbacks: HashMap<String, Box<Fn(&str)>> = HashMap::new();
 
@@ -74,7 +72,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
 
             let mut instances = INSTANCES.lock().unwrap();
             *instances += 1;
-            println!("instances = {:?}", *instances);
+            println!("mosq client instance {:?} created", *instances);
             if *instances == 1 {
                 unsafe {
                     println!("@@@ Initializing mosquitto library @@@");
@@ -131,7 +129,9 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                                                 8884,
                                                 self.keep_alive);
             if n_ret == 0 {
-                // TODO: What if mqtt connection is unsuccesfull which can only be known in connect callback. Maybe pass this to callback
+                // TODO: What happens to this thread if there is a problem if error is reported in callback (n_ret == 0 and error in callback (is this possible?))
+                // Start a thread to process network traffic. All the callbacks are handled by this thread
+                // Seems like this needs to be called per client. Or else callbacks are not working.
                 bindings::mosquitto_loop_start(self.mosquitto);
                 Ok(self)
             } else {
@@ -147,7 +147,6 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                           client_cert: Option<(&str, &str)>)
                           -> Result<&Self, i32> {
 
-        let c_host = CString::new(host);
         let c_ca_cert = CString::new(ca_cert);
         let c_client_cert: Result<CString, NulError>;
         let c_client_key: Result<CString, NulError>;
@@ -199,6 +198,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     // Registered callback is called when the broker sends a CONNACK message in response
     // to a connection. Will be called even incase of failure. All your sub/pub stuff
     // should ideally be done in this callback when connection is successful
+    // NOTE: Make sure that this callback is called to start a network thread if you are not using loop_forever()
     pub fn onconnect_callback<F>(&mut self, callback: F)
         where F: Fn(i32),
               F: 'static
@@ -270,7 +270,6 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         }
     }
 
-    // TODO: Convert Into<String> to &str
     pub fn publish(&self, topic: &str, message: &str, qos: Qos) {
 
         // CString::new(topic).unwrap().as_ptr() is wrong.
@@ -372,19 +371,19 @@ impl<'b, 'c, 'd> Drop for Client<'b, 'c, 'd> {
     fn drop(&mut self) {
 
         unsafe {
+            bindings::mosquitto_disconnect(self.mosquitto);
+            bindings::mosquitto_loop_stop(self.mosquitto, false as u8);
             bindings::mosquitto_destroy(self.mosquitto);
         }
 
         let mut instances = INSTANCES.lock().unwrap();
-        println!("instances = {:?}", *instances);
+        println!("mosq client instance {:?} desroyed", *instances);
         *instances -= 1;
 
 
         if *instances == 0 {
             println!("@@@ All clients dead. Cleaning mosquitto library @@@");
-            unsafe {
-                bindings::mosquitto_lib_cleanup();
-            }
+            cleanup();
         }
     }
 }
