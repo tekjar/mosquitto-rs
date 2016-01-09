@@ -372,7 +372,7 @@ impl<'b, 'c, 'd> Drop for Client<'b, 'c, 'd> {
 
         unsafe {
             bindings::mosquitto_disconnect(self.mosquitto);
-            bindings::mosquitto_loop_stop(self.mosquitto, false as u8);
+            bindings::mosquitto_loop_stop(self.mosquitto, true as u8);
             bindings::mosquitto_destroy(self.mosquitto);
         }
 

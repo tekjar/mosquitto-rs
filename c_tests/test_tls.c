@@ -55,6 +55,7 @@ int main(){
 	}
 	
 	//mosquitto_loop_forever(m, -1, 1);
+	mosquitto_disconnect(m);
 	mosquitto_destroy(m);
 	mosquitto_lib_cleanup();
 }
