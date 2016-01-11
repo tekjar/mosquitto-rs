@@ -118,8 +118,9 @@ fn client_persistance() {
     //     }
     // }
 
+    println!("@@@@@@@@@");
     for client in clients.iter_mut() {
-        match client.secure_connect("localhost",
+        match client.secure_connect("ec2-52-77-220-182.ap-southeast-1.compute.amazonaws.com",
                                     "/home/raviteja/Desktop/certs/ca.crt",
                                     Some(("/home/raviteja/Desktop/certs/scooter.crt",
                                           "/home/raviteja/Desktop/certs/scooter.key"))) {
