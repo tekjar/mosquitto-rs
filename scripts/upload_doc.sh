@@ -1,3 +1,6 @@
-if [ "$TRAVIS_RUST_VERSION" = "stable" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then
-	curl https://raw.githubusercontent.com/ogeon/travis-doc-upload/master/travis-doc-upload.sh | sh
+#!/bin/bash
+
+if [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_RUST_VERSION" = "stable" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then
+	echo $TRAVIS_REPO_SLUG
+	curl https://raw.githubusercontent.com/kteza1/mystuff/master/doc-deploy.sh | sh 
 fi
