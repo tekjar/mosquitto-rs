@@ -18,7 +18,7 @@ branches:
   - auto
 script:
 - cargo build --verbose
-- cargo doc
+- cargo doc; cp -r target/doc documentation/rustdoc
 after_success:
 - bash scripts/upload_doc.sh
 env:
