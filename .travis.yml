@@ -1,0 +1,21 @@
+language: rust
+sudo: false
+cache:
+  directories:
+    - $HOME/.cargo
+rust:
+  - stable
+  - beta
+os:
+  - linux
+
+branches:
+  only:
+    - master
+    - auto
+script:
+  - cargo build
+  - cargo doc
+
+after_success:
+  - sh scripts/upload_doc.sh
