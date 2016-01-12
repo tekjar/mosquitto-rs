@@ -1,6 +1,10 @@
 #mosquitto-rs [![travis](https://travis-ci.org/kteza1/mosquitto-rs.svg?branch=master)](https://travis-ci.org/kteza1/mosquitto-rs)
 
 Rust bindings and wrappers for mosquitto mqtt client library
+  
+[API DOCUMENTATION](http://kteza1.github.io/mosquitto-rs/rustdoc/mosquitto/)
+  
+[EXAMPLES]()
 
 ###HOW TO BUILD
 ---
