@@ -1,4 +1,4 @@
-#mosquitto-rs
+#mosquitto-rs ![travis](https://travis-ci.org/kteza1/mosquitto-rs.svg?branch=master)
 
 Rust bindings and wrappers for mosquitto mqtt client library
 
