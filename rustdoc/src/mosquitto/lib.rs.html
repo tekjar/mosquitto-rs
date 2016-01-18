@@ -438,6 +438,7 @@
 <span id="396">396</span>
 <span id="397">397</span>
 <span id="398">398</span>
+<span id="399">399</span>
 </pre><pre class='rust '>
 <span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>libc</span>;
 <span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>c_sources</span> <span class='kw'>as</span> <span class='ident'>bindings</span>;
@@ -599,12 +600,13 @@
                 <span class='ident'>c_client_key</span> <span class='op'>=</span> <span class='ident'>CString</span>::<span class='ident'>new</span>(<span class='ident'>key</span>);
                 <span class='kw'>unsafe</span> {
                     <span class='ident'>bindings</span>::<span class='ident'>mosquitto_tls_insecure_set</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>, <span class='number'>1</span> <span class='kw'>as</span> <span class='ident'>u8</span>);
-                    <span class='ident'>tls_ret</span> <span class='op'>=</span> <span class='ident'>bindings</span>::<span class='ident'>mosquitto_tls_set</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>,
-                                                          <span class='ident'>c_ca_cert</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
-                                                          <span class='ident'>ptr</span>::<span class='ident'>null_mut</span>(),
-                                                          <span class='ident'>c_client_cert</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
-                                                          <span class='ident'>c_client_key</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
-                                                          <span class='prelude-val'>None</span>);
+                    <span class='ident'>tls_ret</span> <span class='op'>=</span>
+                        <span class='ident'>bindings</span>::<span class='ident'>mosquitto_tls_set</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>,
+                                                    <span class='ident'>c_ca_cert</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> _,
+                                                    <span class='ident'>ptr</span>::<span class='ident'>null_mut</span>(),
+                                                    <span class='ident'>c_client_cert</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> _,
+                                                    <span class='ident'>c_client_key</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> _,
+                                                    <span class='prelude-val'>None</span>);
                 }
 
                 <span class='kw'>if</span> <span class='ident'>tls_ret</span> <span class='op'>!=</span> <span class='number'>0</span> {
