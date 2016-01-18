@@ -1,5 +1,5 @@
 extern crate libc;
-extern crate c_sources as bindings;
+extern crate mosquitto_sys as bindings;
 
 use std::ptr;
 use std::mem;

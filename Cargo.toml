@@ -7,6 +7,6 @@ version = "0.3.0"
 lazy_static = "*"
 libc = "*"
 
-[dependencies.c_sources]
-path = "c_sources"
+[dependencies.mosquitto-sys]
+path = "mosquitto-sys"
 version = "*"
