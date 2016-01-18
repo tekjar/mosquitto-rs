@@ -158,12 +158,13 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                 c_client_key = CString::new(key);
                 unsafe {
                     bindings::mosquitto_tls_insecure_set(self.mosquitto, 1 as u8);
-                    tls_ret = bindings::mosquitto_tls_set(self.mosquitto,
-                                                          c_ca_cert.unwrap().as_ptr(),
-                                                          ptr::null_mut(),
-                                                          c_client_cert.unwrap().as_ptr(),
-                                                          c_client_key.unwrap().as_ptr(),
-                                                          None);
+                    tls_ret =
+                        bindings::mosquitto_tls_set(self.mosquitto,
+                                                    c_ca_cert.unwrap().as_ptr() as *const _,
+                                                    ptr::null_mut(),
+                                                    c_client_cert.unwrap().as_ptr() as *const _,
+                                                    c_client_key.unwrap().as_ptr() as *const _,
+                                                    None);
                 }
 
                 if tls_ret != 0 {
