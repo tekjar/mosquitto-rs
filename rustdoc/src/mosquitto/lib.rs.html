@@ -9,6 +9,7 @@
 
     <title>lib.rs.html -- source</title>
 
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
     <link rel="stylesheet" type="text/css" href="../../main.css">
 
     
@@ -505,7 +506,7 @@
 
         <span class='comment'>// TODO: Replace all &#39;unwrap().as_ptr() as *const _&#39; with &#39;unwrap().as_ptr()&#39; in rust 1.6</span>
         <span class='kw'>unsafe</span> {
-            <span class='ident'>client</span>.<span class='ident'>mosquitto</span> <span class='op'>=</span> <span class='ident'>bindings</span>::<span class='ident'>mosquitto_new</span>(<span class='ident'>id</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> _,
+            <span class='ident'>client</span>.<span class='ident'>mosquitto</span> <span class='op'>=</span> <span class='ident'>bindings</span>::<span class='ident'>mosquitto_new</span>(<span class='ident'>id</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
                                                        <span class='ident'>clean</span> <span class='kw'>as</span> <span class='ident'>u8</span>,
                                                        <span class='ident'>ptr</span>::<span class='ident'>null_mut</span>());
         }
@@ -545,7 +546,7 @@
         <span class='kw'>unsafe</span> {
             <span class='comment'>// Publish will with Qos 2</span>
             <span class='ident'>bindings</span>::<span class='ident'>mosquitto_will_set</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>,
-                                         <span class='ident'>topic</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> _,
+                                         <span class='ident'>topic</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
                                          <span class='ident'>msg_len</span> <span class='kw'>as</span> <span class='ident'>i32</span>,
                                          <span class='ident'>message</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>libc</span>::<span class='ident'>c_void</span>,
                                          <span class='number'>2</span>,
@@ -567,7 +568,7 @@
         <span class='comment'>// TODO: Take optional port number in the string and split it</span>
         <span class='kw'>unsafe</span> {
             <span class='ident'>n_ret</span> <span class='op'>=</span> <span class='ident'>bindings</span>::<span class='ident'>mosquitto_connect</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>,
-                                                <span class='ident'>host</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> _,
+                                                <span class='ident'>host</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
                                                 <span class='number'>8884</span>,
                                                 <span class='self'>self</span>.<span class='ident'>keep_alive</span>);
             <span class='kw'>if</span> <span class='ident'>n_ret</span> <span class='op'>==</span> <span class='number'>0</span> {
@@ -602,10 +603,10 @@
                     <span class='ident'>bindings</span>::<span class='ident'>mosquitto_tls_insecure_set</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>, <span class='number'>1</span> <span class='kw'>as</span> <span class='ident'>u8</span>);
                     <span class='ident'>tls_ret</span> <span class='op'>=</span>
                         <span class='ident'>bindings</span>::<span class='ident'>mosquitto_tls_set</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>,
-                                                    <span class='ident'>c_ca_cert</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> _,
+                                                    <span class='ident'>c_ca_cert</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
                                                     <span class='ident'>ptr</span>::<span class='ident'>null_mut</span>(),
-                                                    <span class='ident'>c_client_cert</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> _,
-                                                    <span class='ident'>c_client_key</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> _,
+                                                    <span class='ident'>c_client_cert</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
+                                                    <span class='ident'>c_client_key</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
                                                     <span class='prelude-val'>None</span>);
                 }
 
@@ -620,7 +621,7 @@
             <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> {
                 <span class='kw'>unsafe</span> {
                     <span class='ident'>tls_ret</span> <span class='op'>=</span> <span class='ident'>bindings</span>::<span class='ident'>mosquitto_tls_set</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>,
-                                                          <span class='ident'>c_ca_cert</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> _,
+                                                          <span class='ident'>c_ca_cert</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
                                                           <span class='ident'>ptr</span>::<span class='ident'>null_mut</span>(),
                                                           <span class='ident'>ptr</span>::<span class='ident'>null_mut</span>(),
                                                           <span class='ident'>ptr</span>::<span class='ident'>null_mut</span>(),
@@ -682,7 +683,7 @@
         <span class='kw'>unsafe</span> {
             <span class='ident'>bindings</span>::<span class='ident'>mosquitto_subscribe</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>,
                                           <span class='ident'>ptr</span>::<span class='ident'>null_mut</span>(),
-                                          <span class='ident'>topic</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> _,
+                                          <span class='ident'>topic</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
                                           <span class='ident'>qos</span>);
         }
     }
@@ -742,7 +743,7 @@
         <span class='kw'>unsafe</span> {
             <span class='ident'>bindings</span>::<span class='ident'>mosquitto_publish</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>,
                                         <span class='ident'>ptr</span>::<span class='ident'>null_mut</span>(),
-                                        <span class='ident'>topic</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> _,
+                                        <span class='ident'>topic</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
                                         <span class='ident'>msg_len</span> <span class='kw'>as</span> <span class='ident'>i32</span>,
                                         <span class='ident'>message</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>libc</span>::<span class='ident'>c_void</span>,
                                         <span class='ident'>qos</span>,
@@ -790,7 +791,7 @@
         <span class='kw'>unsafe</span> <span class='kw'>extern</span> <span class='string'>&quot;C&quot;</span> <span class='kw'>fn</span> <span class='ident'>onmessage_wrapper</span>(<span class='ident'>mqtt</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>bindings</span>::<span class='ident'>Struct_mosquitto</span>, <span class='ident'>closure</span>: <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>libc</span>::<span class='ident'>c_void</span>, <span class='ident'>mqtt_message</span>: <span class='op'>*</span><span class='kw'>const</span> <span class='ident'>bindings</span>::<span class='ident'>Struct_mosquitto_message</span>)
         {
 
-            <span class='kw'>let</span> <span class='ident'>mqtt_message</span> <span class='op'>=</span> (<span class='op'>*</span><span class='ident'>mqtt_message</span>).<span class='ident'>payload</span> <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> <span class='ident'>i8</span>;
+            <span class='kw'>let</span> <span class='ident'>mqtt_message</span> <span class='op'>=</span> (<span class='op'>*</span><span class='ident'>mqtt_message</span>).<span class='ident'>payload</span> <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> <span class='ident'>libc</span>::<span class='ident'>c_char</span>;
             <span class='kw'>let</span> <span class='ident'>mqtt_message</span> <span class='op'>=</span> <span class='ident'>CStr</span>::<span class='ident'>from_ptr</span>(<span class='ident'>mqtt_message</span>).<span class='ident'>to_bytes</span>();
             <span class='kw'>let</span> <span class='ident'>mqtt_message</span> <span class='op'>=</span> <span class='ident'>std</span>::<span class='ident'>str</span>::<span class='ident'>from_utf8</span>(<span class='ident'>mqtt_message</span>).<span class='ident'>unwrap</span>();
 
@@ -899,6 +900,6 @@
     <script src="../../jquery.js"></script>
     <script src="../../main.js"></script>
     
-    <script async src="../../search-index.js"></script>
+    <script defer src="../../search-index.js"></script>
 </body>
 </html>
