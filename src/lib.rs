@@ -1,3 +1,12 @@
+//! # RUST MOSQUITTO
+//!
+//! This crate provides rustful wrappers for (unsafe) mosquitto mqtt library.
+//! With these wrappers you can write safe, superfast, concurrent mqtt code.
+//! Since mosquitto libraries are low level and avalilable on almost all the platforms,
+//! this crate is super portable
+//!
+
+
 extern crate libc;
 extern crate mosquitto_sys as bindings;
 
@@ -36,7 +45,7 @@ pub enum Qos {
 }
 
 
-pub fn cleanup() {
+fn cleanup() {
     unsafe {
         bindings::mosquitto_lib_cleanup();
     }
@@ -45,8 +54,8 @@ pub fn cleanup() {
 impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     ///Creates a new mosquitto mqtt client
     ///
-    ///**id**: ID of the new client
-    ///**clean**: Clean session or not. Broker will remember this client(useful during connection drops)
+    ///**id**: ID of the new client  
+    ///**clean**: Clean session or not. If not, broker will remember this client(useful during connection drops)
     ///
     ///```ignore
     ///let mut client = Client::new(&id, true).unwrap()
