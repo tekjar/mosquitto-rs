@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["Qos",""]],"fn":[["cleanup",""]],"struct":[["Client",""]]});
+initSidebarItems({"enum":[["Qos",""]],"struct":[["Client",""]]});

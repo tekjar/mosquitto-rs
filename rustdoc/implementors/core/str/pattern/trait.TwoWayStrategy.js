@@ -1,5 +1,5 @@
 (function() {var implementors = {};
-implementors['libc'] = [];implementors['mosquitto'] = [];
+implementors['mosquitto'] = [];
 
             if (window.register_implementors) {
                 window.register_implementors(implementors);
