@@ -1,0 +1,7 @@
+[target.x86_64-unknown-linux-gnu.mosquitto]
+rustc-link-search = ["/usr/lib", "/usr/local/lib"]
+rustc-link-lib = ["mosquitto"]
+
+[target.x86_64-apple-darwin.mosquitto]
+rustc-link-search = ["/usr/lib", "/usr/local/lib"]
+rustc-link-lib = ["mosquitto"]
