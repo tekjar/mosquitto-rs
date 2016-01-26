@@ -440,6 +440,99 @@
 <span id="397">397</span>
 <span id="398">398</span>
 <span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
 </pre><pre class='rust '>
 <span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>libc</span>;
 <span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>mosquitto_sys</span> <span class='kw'>as</span> <span class='ident'>bindings</span>;
@@ -486,6 +579,14 @@
 }
 
 <span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span>, <span class='lifetime'>&#39;c</span>, <span class='lifetime'>&#39;d</span><span class='op'>&gt;</span> <span class='ident'>Client</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span>, <span class='lifetime'>&#39;c</span>, <span class='lifetime'>&#39;d</span><span class='op'>&gt;</span> {
+    <span class='doccomment'>///Creates a new mosquitto mqtt client</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>///**id**: ID of the new client</span>
+    <span class='doccomment'>///**clean**: Clean session or not. Broker will remember this client(useful during connection drops)</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>///```ignore</span>
+    <span class='doccomment'>///let mut client = Client::new(&amp;id, true).unwrap()</span>
+    <span class='doccomment'>///```</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>new</span>(<span class='ident'>id</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>, <span class='ident'>clean</span>: <span class='ident'>bool</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>Client</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span>, <span class='lifetime'>&#39;c</span>, <span class='lifetime'>&#39;d</span><span class='op'>&gt;</span>, <span class='ident'>i32</span><span class='op'>&gt;</span> {
         <span class='kw'>let</span> <span class='ident'>icallbacks</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Fn</span>(<span class='ident'>i32</span>)<span class='op'>&gt;&gt;</span> <span class='op'>=</span> <span class='ident'>HashMap</span>::<span class='ident'>new</span>();
         <span class='kw'>let</span> <span class='ident'>scallbacks</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Fn</span>(<span class='kw-2'>&amp;</span><span class='ident'>str</span>)<span class='op'>&gt;&gt;</span> <span class='op'>=</span> <span class='ident'>HashMap</span>::<span class='ident'>new</span>();
@@ -530,13 +631,35 @@
         }
     }
 
-
+    <span class='doccomment'>///The number of seconds after which the broker should </span>
+    <span class='doccomment'>///send a PING message to the client if no other messages </span>
+    <span class='doccomment'>///have been exchanged in that time. This is necessary for</span>
+    <span class='doccomment'>///keeping the connection alive</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>///```ignore</span>
+    <span class='doccomment'>///let mut client = Client::new(&amp;id, true)</span>
+    <span class='doccomment'>///                         .unwrap()</span>
+    <span class='doccomment'>///                         .keep_alive(5)</span>
+    <span class='doccomment'>///```</span>
+    <span class='doccomment'>///</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>keep_alive</span>(<span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>keepalive</span>: <span class='ident'>i32</span>) <span class='op'>-&gt;</span> <span class='kw'>Self</span> {
         <span class='self'>self</span>.<span class='ident'>keep_alive</span> <span class='op'>=</span> <span class='ident'>keepalive</span>;
         <span class='self'>self</span>
     }
 
 
+
+    <span class='doccomment'>///Will topic and message on behalf of the client.</span>
+    <span class='doccomment'>///Broker will take the responsibility of publishing this</span>
+    <span class='doccomment'>///after the client dies</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>///```ignore</span>
+    <span class='doccomment'>///let mut client = Client::new(&amp;id, true)</span>
+    <span class='doccomment'>///                         .unwrap()</span>
+    <span class='doccomment'>///                         .keep_alive(5)</span>
+    <span class='doccomment'>///                         .will(&quot;goodbye&quot;, &quot;my last words&quot;);</span>
+    <span class='doccomment'>///```</span>
+    <span class='doccomment'>///</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>will</span>(<span class='self'>self</span>, <span class='ident'>topic</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>, <span class='ident'>message</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>) <span class='op'>-&gt;</span> <span class='kw'>Self</span> {
 
         <span class='kw'>let</span> <span class='ident'>msg_len</span> <span class='op'>=</span> <span class='ident'>message</span>.<span class='ident'>len</span>();
@@ -557,6 +680,16 @@
     }
 
 
+    <span class='doccomment'>///Connects the client to broker. Connects to port 1883 by default (TODO)</span>
+    <span class='doccomment'>///Speciy in `HOST:PORT` format if you want to connect to a different port.</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>///```ignore</span>
+    <span class='doccomment'>/// match client.connect(&quot;localhost&quot;) {</span>
+    <span class='doccomment'>///     Ok(_) =&gt; println!(&quot;Connection successful --&gt; {:?}&quot;, client.id),</span>
+    <span class='doccomment'>///     Err(n) =&gt; panic!(&quot;Connection error = {:?}&quot;, n),</span>
+    <span class='doccomment'>/// }</span>
+    <span class='doccomment'>///```</span>
+    <span class='doccomment'>///</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>connect</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>host</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;d</span> <span class='ident'>str</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='kw-2'>&amp;</span><span class='kw'>Self</span>, <span class='ident'>i32</span><span class='op'>&gt;</span> {
 
         <span class='self'>self</span>.<span class='ident'>host</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>host</span>);
@@ -583,13 +716,24 @@
         }
     }
 
-    <span class='comment'>// TODO: Remove all the unwraps and panics from the code</span>
+
+    <span class='doccomment'>///Connects the client to broker using certificate based TLS authentication. </span>
+    <span class='doccomment'>///Connects to port 8884 by default (TODO).</span>
+    <span class='doccomment'>///Speciy in `HOST:PORT` format if you want to connect to a different port.</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>///```ignore</span>
+    <span class='doccomment'>/// match client.connect(&quot;localhost&quot;) {</span>
+    <span class='doccomment'>///     Ok(_) =&gt; println!(&quot;Connection successful --&gt; {:?}&quot;, client.id),</span>
+    <span class='doccomment'>///     Err(n) =&gt; panic!(&quot;Connection error = {:?}&quot;, n),</span>
+    <span class='doccomment'>/// }</span>
+    <span class='doccomment'>///```</span>
+    <span class='doccomment'>///</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>secure_connect</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>,
                           <span class='ident'>host</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;d</span> <span class='ident'>str</span>,
                           <span class='ident'>ca_cert</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>,
                           <span class='ident'>client_cert</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span>(<span class='kw-2'>&amp;</span><span class='ident'>str</span>, <span class='kw-2'>&amp;</span><span class='ident'>str</span>)<span class='op'>&gt;</span>)
                           <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='kw-2'>&amp;</span><span class='kw'>Self</span>, <span class='ident'>i32</span><span class='op'>&gt;</span> {
-
+        <span class='comment'>// TODO: Remove all the unwraps and panics from the code</span>
         <span class='kw'>let</span> <span class='ident'>c_ca_cert</span> <span class='op'>=</span> <span class='ident'>CString</span>::<span class='ident'>new</span>(<span class='ident'>ca_cert</span>);
         <span class='kw'>let</span> <span class='ident'>c_client_cert</span>: <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>CString</span>, <span class='ident'>NulError</span><span class='op'>&gt;</span>;
         <span class='kw'>let</span> <span class='ident'>c_client_key</span>: <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>CString</span>, <span class='ident'>NulError</span><span class='op'>&gt;</span>;
@@ -601,13 +745,12 @@
                 <span class='ident'>c_client_key</span> <span class='op'>=</span> <span class='ident'>CString</span>::<span class='ident'>new</span>(<span class='ident'>key</span>);
                 <span class='kw'>unsafe</span> {
                     <span class='ident'>bindings</span>::<span class='ident'>mosquitto_tls_insecure_set</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>, <span class='number'>1</span> <span class='kw'>as</span> <span class='ident'>u8</span>);
-                    <span class='ident'>tls_ret</span> <span class='op'>=</span>
-                        <span class='ident'>bindings</span>::<span class='ident'>mosquitto_tls_set</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>,
-                                                    <span class='ident'>c_ca_cert</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
-                                                    <span class='ident'>ptr</span>::<span class='ident'>null_mut</span>(),
-                                                    <span class='ident'>c_client_cert</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
-                                                    <span class='ident'>c_client_key</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
-                                                    <span class='prelude-val'>None</span>);
+                    <span class='ident'>tls_ret</span> <span class='op'>=</span> <span class='ident'>bindings</span>::<span class='ident'>mosquitto_tls_set</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>,
+                                                          <span class='ident'>c_ca_cert</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
+                                                          <span class='ident'>ptr</span>::<span class='ident'>null_mut</span>(),
+                                                          <span class='ident'>c_client_cert</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
+                                                          <span class='ident'>c_client_key</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>(),
+                                                          <span class='prelude-val'>None</span>);
                 }
 
                 <span class='kw'>if</span> <span class='ident'>tls_ret</span> <span class='op'>!=</span> <span class='number'>0</span> {
@@ -639,10 +782,18 @@
     }
 
 
-    <span class='comment'>// Registered callback is called when the broker sends a CONNACK message in response</span>
-    <span class='comment'>// to a connection. Will be called even incase of failure. All your sub/pub stuff</span>
-    <span class='comment'>// should ideally be done in this callback when connection is successful</span>
-    <span class='comment'>// NOTE: Make sure that this callback is called to start a network thread if you are not using loop_forever()</span>
+    <span class='doccomment'>///Registered callback is called when the broker sends a CONNACK message in response</span>
+    <span class='doccomment'>///to a connection. Will be called even incase of failure. All your sub/pub stuff</span>
+    <span class='doccomment'>///should ideally be done in this callback when connection is successful</span>
+    <span class='doccomment'>///Callback argument specifies the connection state</span>
+    <span class='doccomment'>///```ignore</span>
+    <span class='doccomment'>/// let i = 100;</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// client.onconnect_callback(move |a: i32| {</span>
+    <span class='doccomment'>///         println!(&quot;i = {:?}&quot;, i);</span>
+    <span class='doccomment'>///         println!(&quot;@@@ On connect callback {}@@@&quot;, a)</span>
+    <span class='doccomment'>///     });</span>
+    <span class='doccomment'>///```</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>onconnect_callback</span><span class='op'>&lt;</span><span class='ident'>F</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>callback</span>: <span class='ident'>F</span>)
         <span class='kw'>where</span> <span class='ident'>F</span>: <span class='ident'>Fn</span>(<span class='ident'>i32</span>),
               <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span>
@@ -671,6 +822,12 @@
         }
     }
 
+
+    <span class='doccomment'>///Subscibe to a topic with a Qos</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>///```ignore</span>
+    <span class='doccomment'>/// client.subscribe(&quot;hello/world&quot;, Qos::AtMostOnce);</span>
+    <span class='doccomment'>///```</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>subscribe</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>topic</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>, <span class='ident'>qos</span>: <span class='ident'>Qos</span>) {
         <span class='kw'>let</span> <span class='ident'>topic</span> <span class='op'>=</span> <span class='ident'>CString</span>::<span class='ident'>new</span>(<span class='ident'>topic</span>);
 
@@ -688,7 +845,13 @@
         }
     }
 
-    <span class='comment'>// Call back that will be called when broker responds to a subscription</span>
+    <span class='doccomment'>///Registered callback will be called when broker responds to a subscription</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>///```ignore</span>
+    <span class='doccomment'>/// client.onsubscribe_callback(move |mid| {</span>
+    <span class='doccomment'>///            println!(&quot;@@@ Subscribe request received for message mid = {:?}&quot;, mid)</span>
+    <span class='doccomment'>///        });</span>
+    <span class='doccomment'>///```</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>onsubscribe_callback</span><span class='op'>&lt;</span><span class='ident'>F</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>callback</span>: <span class='ident'>F</span>)
         <span class='kw'>where</span> <span class='ident'>F</span>: <span class='ident'>Fn</span>(<span class='ident'>i32</span>),
               <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span>
@@ -714,6 +877,13 @@
         }
     }
 
+
+    <span class='doccomment'>///Publish a message with a Qos</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>///```ignore</span>
+    <span class='doccomment'>/// let message = format!(&quot;{}...{:?} - Message {}&quot;, count, client.id, i);</span>
+    <span class='doccomment'>/// client.publish(&quot;hello/world&quot;, &amp;message, Qos::AtLeastOnce);</span>
+    <span class='doccomment'>///```</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>publish</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>topic</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>, <span class='ident'>message</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>, <span class='ident'>qos</span>: <span class='ident'>Qos</span>) {
 
         <span class='comment'>// CString::new(topic).unwrap().as_ptr() is wrong.</span>
@@ -752,6 +922,15 @@
     }
 
 
+
+    <span class='doccomment'>///Registered callback is called when a message initiated with `publish` has been </span>
+    <span class='doccomment'>///sent to the broker successfully.</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>///```ignore</span>
+    <span class='doccomment'>///client.onpublish_callback(move |mid| {</span>
+    <span class='doccomment'>///         println!(&quot;@@@ Publish request received for message mid = {:?}&quot;, mid)</span>
+    <span class='doccomment'>///     });</span>
+    <span class='doccomment'>///```</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>onpublish_callback</span><span class='op'>&lt;</span><span class='ident'>F</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>callback</span>: <span class='ident'>F</span>)
         <span class='kw'>where</span> <span class='ident'>F</span>: <span class='ident'>Fn</span>(<span class='ident'>i32</span>),
               <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span>
@@ -776,6 +955,13 @@
     }
 
 
+    <span class='doccomment'>///Registered callback will be called when a message is received from the broker</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>///```ignore</span>
+    <span class='doccomment'>///client.onmesssage_callback(move |s| {</span>
+    <span class='doccomment'>///         println!(&quot;@@@ Message = {:?}, Count = {:?}&quot;, s, count);</span>
+    <span class='doccomment'>///     });</span>
+    <span class='doccomment'>///```</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>onmesssage_callback</span><span class='op'>&lt;</span><span class='ident'>F</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>callback</span>: <span class='ident'>F</span>)
         <span class='kw'>where</span> <span class='ident'>F</span>: <span class='ident'>Fn</span>(<span class='kw-2'>&amp;</span><span class='ident'>str</span>),
               <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span>
