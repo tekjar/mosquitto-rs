@@ -43,6 +43,14 @@ pub fn cleanup() {
 }
 
 impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
+    ///Creates a new mosquitto mqtt client
+    ///
+    ///**id**: ID of the new client
+    ///**clean**: Clean session or not. Broker will remember this client(useful during connection drops)
+    ///
+    ///```ignore
+    ///let mut client = Client::new(&id, true).unwrap()
+    ///```
     pub fn new(id: &str, clean: bool) -> Result<Client<'b, 'c, 'd>, i32> {
         let icallbacks: HashMap<String, Box<Fn(i32)>> = HashMap::new();
         let scallbacks: HashMap<String, Box<Fn(&str)>> = HashMap::new();
@@ -87,13 +95,35 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         }
     }
 
-
+    ///The number of seconds after which the broker should 
+    ///send a PING message to the client if no other messages 
+    ///have been exchanged in that time. This is necessary for
+    ///keeping the connection alive
+    ///
+    ///```ignore
+    ///let mut client = Client::new(&id, true)
+    ///                         .unwrap()
+    ///                         .keep_alive(5)
+    ///```
+    ///
     pub fn keep_alive(mut self, keepalive: i32) -> Self {
         self.keep_alive = keepalive;
         self
     }
 
 
+
+    ///Will topic and message on behalf of the client.
+    ///Broker will take the responsibility of publishing this
+    ///after the client dies
+    ///
+    ///```ignore
+    ///let mut client = Client::new(&id, true)
+    ///                         .unwrap()
+    ///                         .keep_alive(5)
+    ///                         .will("goodbye", "my last words");
+    ///```
+    ///
     pub fn will(self, topic: &str, message: &str) -> Self {
 
         let msg_len = message.len();
@@ -114,6 +144,16 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     }
 
 
+    ///Connects the client to broker. Connects to port 1883 by default (TODO)
+    ///Speciy in `HOST:PORT` format if you want to connect to a different port.
+    ///
+    ///```ignore
+    /// match client.connect("localhost") {
+    ///     Ok(_) => println!("Connection successful --> {:?}", client.id),
+    ///     Err(n) => panic!("Connection error = {:?}", n),
+    /// }
+    ///```
+    ///
     pub fn connect(&mut self, host: &'d str) -> Result<&Self, i32> {
 
         self.host = Some(host);
@@ -140,13 +180,24 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         }
     }
 
-    // TODO: Remove all the unwraps and panics from the code
+
+    ///Connects the client to broker using certificate based TLS authentication. 
+    ///Connects to port 8884 by default (TODO).
+    ///Speciy in `HOST:PORT` format if you want to connect to a different port.
+    ///
+    ///```ignore
+    /// match client.connect("localhost") {
+    ///     Ok(_) => println!("Connection successful --> {:?}", client.id),
+    ///     Err(n) => panic!("Connection error = {:?}", n),
+    /// }
+    ///```
+    ///
     pub fn secure_connect(&mut self,
                           host: &'d str,
                           ca_cert: &str,
                           client_cert: Option<(&str, &str)>)
                           -> Result<&Self, i32> {
-
+        // TODO: Remove all the unwraps and panics from the code
         let c_ca_cert = CString::new(ca_cert);
         let c_client_cert: Result<CString, NulError>;
         let c_client_key: Result<CString, NulError>;
@@ -158,13 +209,12 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                 c_client_key = CString::new(key);
                 unsafe {
                     bindings::mosquitto_tls_insecure_set(self.mosquitto, 1 as u8);
-                    tls_ret =
-                        bindings::mosquitto_tls_set(self.mosquitto,
-                                                    c_ca_cert.unwrap().as_ptr(),
-                                                    ptr::null_mut(),
-                                                    c_client_cert.unwrap().as_ptr(),
-                                                    c_client_key.unwrap().as_ptr(),
-                                                    None);
+                    tls_ret = bindings::mosquitto_tls_set(self.mosquitto,
+                                                          c_ca_cert.unwrap().as_ptr(),
+                                                          ptr::null_mut(),
+                                                          c_client_cert.unwrap().as_ptr(),
+                                                          c_client_key.unwrap().as_ptr(),
+                                                          None);
                 }
 
                 if tls_ret != 0 {
@@ -196,10 +246,18 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     }
 
 
-    // Registered callback is called when the broker sends a CONNACK message in response
-    // to a connection. Will be called even incase of failure. All your sub/pub stuff
-    // should ideally be done in this callback when connection is successful
-    // NOTE: Make sure that this callback is called to start a network thread if you are not using loop_forever()
+    ///Registered callback is called when the broker sends a CONNACK message in response
+    ///to a connection. Will be called even incase of failure. All your sub/pub stuff
+    ///should ideally be done in this callback when connection is successful
+    ///Callback argument specifies the connection state
+    ///```ignore
+    /// let i = 100;
+    ///
+    /// client.onconnect_callback(move |a: i32| {
+    ///         println!("i = {:?}", i);
+    ///         println!("@@@ On connect callback {}@@@", a)
+    ///     });
+    ///```
     pub fn onconnect_callback<F>(&mut self, callback: F)
         where F: Fn(i32),
               F: 'static
@@ -228,6 +286,12 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         }
     }
 
+
+    ///Subscibe to a topic with a Qos
+    ///
+    ///```ignore
+    /// client.subscribe("hello/world", Qos::AtMostOnce);
+    ///```
     pub fn subscribe(&self, topic: &str, qos: Qos) {
         let topic = CString::new(topic);
 
@@ -245,7 +309,13 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         }
     }
 
-    // Call back that will be called when broker responds to a subscription
+    ///Registered callback will be called when broker responds to a subscription
+    ///
+    ///```ignore
+    /// client.onsubscribe_callback(move |mid| {
+    ///            println!("@@@ Subscribe request received for message mid = {:?}", mid)
+    ///        });
+    ///```
     pub fn onsubscribe_callback<F>(&mut self, callback: F)
         where F: Fn(i32),
               F: 'static
@@ -271,6 +341,13 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         }
     }
 
+
+    ///Publish a message with a Qos
+    ///
+    ///```ignore
+    /// let message = format!("{}...{:?} - Message {}", count, client.id, i);
+    /// client.publish("hello/world", &message, Qos::AtLeastOnce);
+    ///```
     pub fn publish(&self, topic: &str, message: &str, qos: Qos) {
 
         // CString::new(topic).unwrap().as_ptr() is wrong.
@@ -309,6 +386,15 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     }
 
 
+
+    ///Registered callback is called when a message initiated with `publish` has been 
+    ///sent to the broker successfully.
+    ///
+    ///```ignore
+    ///client.onpublish_callback(move |mid| {
+    ///         println!("@@@ Publish request received for message mid = {:?}", mid)
+    ///     });
+    ///```
     pub fn onpublish_callback<F>(&mut self, callback: F)
         where F: Fn(i32),
               F: 'static
@@ -333,6 +419,13 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     }
 
 
+    ///Registered callback will be called when a message is received from the broker
+    ///
+    ///```ignore
+    ///client.onmesssage_callback(move |s| {
+    ///         println!("@@@ Message = {:?}, Count = {:?}", s, count);
+    ///     });
+    ///```
     pub fn onmesssage_callback<F>(&mut self, callback: F)
         where F: Fn(&str),
               F: 'static
