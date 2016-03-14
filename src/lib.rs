@@ -173,7 +173,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         unsafe {
             n_ret = bindings::mosquitto_connect(self.mosquitto,
                                                 host.unwrap().as_ptr() as *const libc::c_char,
-                                                8884,
+                                                1883,
                                                 self.keep_alive);
             if n_ret == 0 {
                 // TODO: What happens to this thread if there is a problem if error is reported in callback (n_ret == 0 and error in callback (is this possible?))

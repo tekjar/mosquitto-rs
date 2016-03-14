@@ -91,7 +91,7 @@ use std::time::Duration;
 /// Testcase: All the scooter clients will start publishing and AWS client receives it. 
 ///           At some point in between, broker goes down and hence AWS client will stop receiving
 ///           AWS client should receive all the messages when broker comes up again. Total count should be = 100
-///            
+///  
 #[test]
 fn client_persistance() {
     let mut clients: Vec<Client> = vec![];
@@ -119,16 +119,22 @@ fn client_persistance() {
     // }
 
     println!("@@@@@@@@@");
+    // for client in clients.iter_mut() {
+    //     match client.secure_connect("ec2-52-77-220-182.ap-southeast-1.compute.amazonaws.com",
+    //                                 "/home/raviteja/Desktop/certs/ca.crt",
+    //                                 Some(("/home/raviteja/Desktop/certs/scooter.crt",
+    //                                       "/home/raviteja/Desktop/certs/scooter.key"))) {
+    //         Ok(_) => println!("Connection successful --> {:?}", client.id),
+    //         Err(n) => panic!("Connection error = {:?}", n),
+    //     }
+    // }
+
     for client in clients.iter_mut() {
-        match client.secure_connect("ec2-52-77-220-182.ap-southeast-1.compute.amazonaws.com",
-                                    "/home/raviteja/Desktop/certs/ca.crt",
-                                    Some(("/home/raviteja/Desktop/certs/scooter.crt",
-                                          "/home/raviteja/Desktop/certs/scooter.key"))) {
+        match client.connect("test.mosquitto.org") {
             Ok(_) => println!("Connection successful --> {:?}", client.id),
             Err(n) => panic!("Connection error = {:?}", n),
         }
     }
-
     let mut count = 0;
     for client in clients.iter_mut() {
         for i in 0..10 {
