@@ -716,7 +716,7 @@
         <span class='kw'>unsafe</span> {
             <span class='ident'>n_ret</span> <span class='op'>=</span> <span class='ident'>bindings</span>::<span class='ident'>mosquitto_connect</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>,
                                                 <span class='ident'>host</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> <span class='ident'>libc</span>::<span class='ident'>c_char</span>,
-                                                <span class='number'>1883</span>,
+                                                <span class='number'>8883</span>,
                                                 <span class='self'>self</span>.<span class='ident'>keep_alive</span>);
             <span class='kw'>if</span> <span class='ident'>n_ret</span> <span class='op'>==</span> <span class='number'>0</span> {
                 <span class='comment'>// TODO: What happens to this thread if there is a problem if error is reported in callback (n_ret == 0 and error in callback (is this possible?))</span>
