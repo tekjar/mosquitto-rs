@@ -540,6 +540,13 @@
 <span id="497">497</span>
 <span id="498">498</span>
 <span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! This crate provides rustful wrappers for (unsafe) mosquitto mqtt library.</span>
 <span class='doccomment'>//! With these wrappers you can write safe, superfast, concurrent mqtt code.</span>
@@ -600,7 +607,7 @@
     <span class='doccomment'>///</span>
     <span class='doccomment'>///```ignore</span>
     <span class='doccomment'>///let mut client = Client::new(&amp;id, true).unwrap()</span>
-    <span class='doccomment'>///```</span>
+    <span class='doccomment'>///``</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>new</span>(<span class='ident'>id</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>, <span class='ident'>clean</span>: <span class='ident'>bool</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>Client</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span>, <span class='lifetime'>&#39;c</span>, <span class='lifetime'>&#39;d</span><span class='op'>&gt;</span>, <span class='ident'>i32</span><span class='op'>&gt;</span> {
         <span class='kw'>let</span> <span class='ident'>icallbacks</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Fn</span>(<span class='ident'>i32</span>)<span class='op'>&gt;&gt;</span> <span class='op'>=</span> <span class='ident'>HashMap</span>::<span class='ident'>new</span>();
         <span class='kw'>let</span> <span class='ident'>scallbacks</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Fn</span>(<span class='kw-2'>&amp;</span><span class='ident'>str</span>)<span class='op'>&gt;&gt;</span> <span class='op'>=</span> <span class='ident'>HashMap</span>::<span class='ident'>new</span>();
@@ -898,7 +905,7 @@
     <span class='doccomment'>/// let message = format!(&quot;{}...{:?} - Message {}&quot;, count, client.id, i);</span>
     <span class='doccomment'>/// client.publish(&quot;hello/world&quot;, &amp;message, Qos::AtLeastOnce);</span>
     <span class='doccomment'>///```</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>publish</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>topic</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>, <span class='ident'>message</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>, <span class='ident'>qos</span>: <span class='ident'>Qos</span>) {
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>publish</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>topic</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>, <span class='ident'>message</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>, <span class='ident'>qos</span>: <span class='ident'>Qos</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span>(), <span class='ident'>i32</span><span class='op'>&gt;</span> {
 
         <span class='comment'>// CString::new(topic).unwrap().as_ptr() is wrong.</span>
         <span class='comment'>// topic String gets destroyed and pointer is invalidated</span>
@@ -924,14 +931,21 @@
             <span class='ident'>Qos</span>::<span class='ident'>ExactlyOnce</span> <span class='op'>=&gt;</span> <span class='number'>2</span>,
         };
 
+        <span class='kw'>let</span> <span class='ident'>n_ret</span>: <span class='ident'>i32</span>;
         <span class='kw'>unsafe</span> {
-            <span class='ident'>bindings</span>::<span class='ident'>mosquitto_publish</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>,
-                                        <span class='ident'>ptr</span>::<span class='ident'>null_mut</span>(),
-                                        <span class='ident'>topic</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> <span class='ident'>libc</span>::<span class='ident'>c_char</span>,
-                                        <span class='ident'>msg_len</span> <span class='kw'>as</span> <span class='ident'>i32</span>,
-                                        <span class='ident'>message</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>libc</span>::<span class='ident'>c_void</span>,
-                                        <span class='ident'>qos</span>,
-                                        <span class='number'>0</span>);
+            <span class='ident'>n_ret</span> <span class='op'>=</span> <span class='ident'>bindings</span>::<span class='ident'>mosquitto_publish</span>(<span class='self'>self</span>.<span class='ident'>mosquitto</span>,
+                                                <span class='ident'>ptr</span>::<span class='ident'>null_mut</span>(),
+                                                <span class='ident'>topic</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw'>const</span> <span class='ident'>libc</span>::<span class='ident'>c_char</span>,
+                                                <span class='ident'>msg_len</span> <span class='kw'>as</span> <span class='ident'>i32</span>,
+                                                <span class='ident'>message</span>.<span class='ident'>unwrap</span>().<span class='ident'>as_ptr</span>() <span class='kw'>as</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>libc</span>::<span class='ident'>c_void</span>,
+                                                <span class='ident'>qos</span>,
+                                                <span class='number'>0</span>);
+        }
+
+        <span class='kw'>if</span> <span class='ident'>n_ret</span> <span class='op'>==</span> <span class='number'>0</span> {
+            <span class='prelude-val'>Ok</span>(())
+        } <span class='kw'>else</span> {
+            <span class='prelude-val'>Err</span>(<span class='ident'>n_ret</span>)
         }
     }
 
