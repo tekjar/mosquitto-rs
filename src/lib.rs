@@ -57,7 +57,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     ///
     ///```ignore
     ///let mut client = Client::new(&id, true).unwrap()
-    ///```
+    ///``
     pub fn new(id: &str, clean: bool) -> Result<Client<'b, 'c, 'd>, i32> {
         let icallbacks: HashMap<String, Box<Fn(i32)>> = HashMap::new();
         let scallbacks: HashMap<String, Box<Fn(&str)>> = HashMap::new();
@@ -355,7 +355,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     /// let message = format!("{}...{:?} - Message {}", count, client.id, i);
     /// client.publish("hello/world", &message, Qos::AtLeastOnce);
     ///```
-    pub fn publish(&self, topic: &str, message: &str, qos: Qos) {
+    pub fn publish(&self, topic: &str, message: &str, qos: Qos) -> Result<(), i32> {
 
         // CString::new(topic).unwrap().as_ptr() is wrong.
         // topic String gets destroyed and pointer is invalidated
@@ -381,14 +381,21 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
             Qos::ExactlyOnce => 2,
         };
 
+        let n_ret: i32;
         unsafe {
-            bindings::mosquitto_publish(self.mosquitto,
-                                        ptr::null_mut(),
-                                        topic.unwrap().as_ptr() as *const libc::c_char,
-                                        msg_len as i32,
-                                        message.unwrap().as_ptr() as *mut libc::c_void,
-                                        qos,
-                                        0);
+            n_ret = bindings::mosquitto_publish(self.mosquitto,
+                                                ptr::null_mut(),
+                                                topic.unwrap().as_ptr() as *const libc::c_char,
+                                                msg_len as i32,
+                                                message.unwrap().as_ptr() as *mut libc::c_void,
+                                                qos,
+                                                0);
+        }
+
+        if n_ret == 0 {
+            Ok(())
+        } else {
+            Err(n_ret)
         }
     }
 
