@@ -161,7 +161,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     /// }
     ///```
     ///
-    pub fn connect(&mut self, host: &'d str) -> Result<&Self, i32> {
+    pub fn connect(&mut self, host: &'d str, port: i32) -> Result<&Self, i32> {
 
         self.host = Some(host);
 
@@ -173,7 +173,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         unsafe {
             n_ret = bindings::mosquitto_connect(self.mosquitto,
                                                 host.unwrap().as_ptr() as *const libc::c_char,
-                                                8883,
+                                                port,
                                                 self.keep_alive);
             if n_ret == 0 {
                 // TODO: What happens to this thread if there is a problem if error is reported in callback (n_ret == 0 and error in callback (is this possible?))
@@ -201,6 +201,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     ///
     pub fn secure_connect(&mut self,
                           host: &'d str,
+                          port: i32,
                           ca_cert: &str,
                           client_cert: Option<(&str, &str)>)
                           -> Result<&Self, i32> {
@@ -228,7 +229,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                     cleanup();
                     Err(tls_ret)
                 } else {
-                    self.connect(host)
+                    self.connect(host, port)
                 }
 
             }
@@ -246,7 +247,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                     cleanup();
                     Err(tls_ret)
                 } else {
-                    self.connect(host)
+                    self.connect(host, port)
                 }
             }
         }
