@@ -187,7 +187,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         }
     }
 
-    pub fn reconnect(&mut self) -> Result<&Self, i32> {
+    pub fn reconnect(&self) -> Result<&Self, i32> {
 
         let n_ret;
         // Connect to broker
