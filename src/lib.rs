@@ -187,6 +187,20 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         }
     }
 
+    pub fn reconnect(&mut self) -> Result<&Self, i32> {
+
+        let n_ret;
+        // Connect to broker
+        unsafe {
+            n_ret = bindings::mosquitto_reconnect(self.mosquitto);
+            if n_ret == 0 {
+                Ok(self)
+            } else {
+                Err(n_ret)
+            }
+        }
+    }
+
 
     ///Connects the client to broker using certificate based TLS authentication. 
     ///Connects to port 8884 by default (TODO).
