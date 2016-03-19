@@ -31,7 +31,7 @@ pub struct Client<'b, 'c, 'd> {
     pub host: Option<&'d str>,
     pub keep_alive: i32,
     pub clean_session: bool,
-    pub icallbacks: HashMap<String, Box<Fn(i32)>>,
+    pub icallbacks: HashMap<String, Box<FnMut(i32)>>,
     pub scallbacks: HashMap<String, Box<Fn(&str)>>,
     pub mosquitto: *mut bindings::Struct_mosquitto,
 }
@@ -59,7 +59,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     ///let mut client = Client::new(&id, true).unwrap()
     ///``
     pub fn new(id: &str, clean: bool) -> Result<Client<'b, 'c, 'd>, i32> {
-        let icallbacks: HashMap<String, Box<Fn(i32)>> = HashMap::new();
+        let icallbacks: HashMap<String, Box<FnMut(i32)>> = HashMap::new();
         let scallbacks: HashMap<String, Box<Fn(&str)>> = HashMap::new();
 
         let mut client = Client {
@@ -281,7 +281,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     ///     });
     ///```
     pub fn onconnect_callback<F>(&mut self, callback: F)
-        where F: Fn(i32),
+        where F: FnMut(i32),
               F: 'static
     {
         self.icallbacks.insert("on_connect".to_string(), Box::new(callback));
@@ -301,7 +301,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                                                closure: *mut libc::c_void,
                                                val: libc::c_int) {
             let client: &mut Client = mem::transmute(closure);
-            match client.icallbacks.get("on_connect") {
+            match client.icallbacks.get_mut("on_connect") {
                 Some(cb) => cb(val as i32),
                 _ => panic!("No callback found"),
             }
@@ -339,7 +339,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     ///        });
     ///```
     pub fn onsubscribe_callback<F>(&mut self, callback: F)
-        where F: Fn(i32),
+        where F: FnMut(i32),
               F: 'static
     {
         self.icallbacks.insert("on_subscribe".to_string(), Box::new(callback));
@@ -356,7 +356,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                                                  qos_count: libc::c_int,
                                                  qos_list: *const ::libc::c_int) {
             let client: &mut Client = mem::transmute(closure);
-            match client.icallbacks.get("on_subscribe") {
+            match client.icallbacks.get_mut("on_subscribe") {
                 Some(cb) => cb(mid as i32),
                 _ => panic!("No callback found"),
             }
@@ -370,7 +370,12 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     /// let message = format!("{}...{:?} - Message {}", count, client.id, i);
     /// client.publish("hello/world", &message, Qos::AtLeastOnce);
     ///```
-    pub fn publish(&self, topic: &str, message: &str, qos: Qos) -> Result<(), i32> {
+    pub fn publish(&self,
+                   mid: Option<&i32>,
+                   topic: &str,
+                   message: &str,
+                   qos: Qos)
+                   -> Result<(), i32> {
 
         // CString::new(topic).unwrap().as_ptr() is wrong.
         // topic String gets destroyed and pointer is invalidated
@@ -397,9 +402,14 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         };
 
         let n_ret: i32;
+
+        let c_mid = match mid {
+            Some(m) => m as *const i32 as *mut i32,
+            None => ptr::null_mut(),
+        };
         unsafe {
             n_ret = bindings::mosquitto_publish(self.mosquitto,
-                                                ptr::null_mut(),
+                                                c_mid,
                                                 topic.unwrap().as_ptr() as *const libc::c_char,
                                                 msg_len as i32,
                                                 message.unwrap().as_ptr() as *mut libc::c_void,
@@ -425,7 +435,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     ///     });
     ///```
     pub fn onpublish_callback<F>(&mut self, callback: F)
-        where F: Fn(i32),
+        where F: FnMut(i32),
               F: 'static
     {
         self.icallbacks.insert("on_publish".to_string(), Box::new(callback));
@@ -440,11 +450,12 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                                                closure: *mut libc::c_void,
                                                mid: libc::c_int) {
             let client: &mut Client = mem::transmute(closure);
-            match client.icallbacks.get("on_publish") {
+            match client.icallbacks.get_mut("on_publish") {
                 Some(cb) => cb(mid as i32),
                 _ => panic!("No callback found"),
             }
         }
+
     }
 
 
@@ -480,6 +491,20 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                 _ => panic!("No callback found"),
             }
         }
+    }
+
+    pub fn reinitialise(&self, id: &str, clean: bool) {
+
+        let id = CString::new(id);
+
+        // TODO: Replace all 'unwrap().as_ptr() as *const _' with 'unwrap().as_ptr()' in rust 1.6
+        unsafe {
+            bindings::mosquitto_reinitialise(self.mosquitto,
+                                             id.unwrap().as_ptr() as *const libc::c_char,
+                                             clean as u8,
+                                             ptr::null_mut());
+        }
+
     }
 
     pub fn loop_forever(&self) {
