@@ -507,6 +507,14 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
 
     }
 
+
+    pub fn message_retry_set(&self, timeout: u32) {
+        unsafe {
+            bindings::mosquitto_message_retry_set(self.mosquitto, timeout);
+        }
+    }
+
+
     pub fn loop_forever(&self) {
         unsafe {
             bindings::mosquitto_loop_forever(self.mosquitto, 2000, 1);
