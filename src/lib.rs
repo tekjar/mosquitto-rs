@@ -78,7 +78,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
 
         // TODO: Replace all 'unwrap().as_ptr() as *const _' with 'unwrap().as_ptr()' in rust 1.6
         unsafe {
-            client.mosquitto = bindings::mosquitto_new(id.unwrap().as_ptr() as *const libc::c_char,
+            client.mosquitto = bindings::mosquitto_new(id.unwrap().as_ptr(),
                                                        clean as u8,
                                                        ptr::null_mut());
         }
@@ -140,7 +140,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         unsafe {
             // Publish will with Qos 2
             bindings::mosquitto_will_set(self.mosquitto,
-                                         topic.unwrap().as_ptr() as *const libc::c_char,
+                                         topic.unwrap().as_ptr(),
                                          msg_len as i32,
                                          message.unwrap().as_ptr() as *mut libc::c_void,
                                          2,
@@ -172,7 +172,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         // TODO: Take optional port number in the string and split it
         unsafe {
             n_ret = bindings::mosquitto_connect(self.mosquitto,
-                                                host.unwrap().as_ptr() as *const libc::c_char,
+                                                host.unwrap().as_ptr(),
                                                 port,
                                                 self.keep_alive);
             if n_ret == 0 {
@@ -232,10 +232,10 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                 unsafe {
                     bindings::mosquitto_tls_insecure_set(self.mosquitto, 1 as u8);
                     tls_ret = bindings::mosquitto_tls_set(self.mosquitto,
-                                                          c_ca_cert.unwrap().as_ptr() as *const libc::c_char,
+                                                          c_ca_cert.unwrap().as_ptr(),
                                                           ptr::null_mut(),
-                                                          c_client_cert.unwrap().as_ptr() as *const libc::c_char,
-                                                          c_client_key.unwrap().as_ptr() as *const libc::c_char,
+                                                          c_client_cert.unwrap().as_ptr(),
+                                                          c_client_key.unwrap().as_ptr(),
                                                           None);
                 }
 
@@ -250,7 +250,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
             None => {
                 unsafe {
                     tls_ret = bindings::mosquitto_tls_set(self.mosquitto,
-                                                          c_ca_cert.unwrap().as_ptr() as *const libc::c_char,
+                                                          c_ca_cert.unwrap().as_ptr(),
                                                           ptr::null_mut(),
                                                           ptr::null_mut(),
                                                           ptr::null_mut(),
@@ -326,7 +326,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         unsafe {
             bindings::mosquitto_subscribe(self.mosquitto,
                                           ptr::null_mut(),
-                                          topic.unwrap().as_ptr() as *const libc::c_char,
+                                          topic.unwrap().as_ptr(),
                                           qos);
         }
     }
@@ -410,7 +410,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         unsafe {
             n_ret = bindings::mosquitto_publish(self.mosquitto,
                                                 c_mid,
-                                                topic.unwrap().as_ptr() as *const libc::c_char,
+                                                topic.unwrap().as_ptr(),
                                                 msg_len as i32,
                                                 message.unwrap().as_ptr() as *mut libc::c_void,
                                                 qos,
@@ -481,7 +481,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         unsafe extern "C" fn onmessage_wrapper(mqtt: *mut bindings::Struct_mosquitto, closure: *mut libc::c_void, mqtt_message: *const bindings::Struct_mosquitto_message)
         {
 
-            let mqtt_message = (*mqtt_message).payload as *const i8;
+            let mqtt_message = (*mqtt_message).payload as *const libc::c_char;
             let mqtt_message = CStr::from_ptr(mqtt_message).to_bytes();
             let mqtt_message = std::str::from_utf8(mqtt_message).unwrap();
 
@@ -500,7 +500,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         // TODO: Replace all 'unwrap().as_ptr() as *const _' with 'unwrap().as_ptr()' in rust 1.6
         unsafe {
             bindings::mosquitto_reinitialise(self.mosquitto,
-                                             id.unwrap().as_ptr() as *const libc::c_char,
+                                             id.unwrap().as_ptr(),
                                              clean as u8,
                                              ptr::null_mut());
         }
