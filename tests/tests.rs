@@ -1,6 +1,6 @@
 extern crate mosquitto;
 
-use mosquitto::{Client, Qos};
+use mosquitto::{MqttClient, Qos};
 use std::thread;
 use std::time::Duration;
 
@@ -94,11 +94,11 @@ use std::time::Duration;
 ///  
 #[test]
 fn client_persistance() {
-    let mut clients: Vec<Client> = vec![];
+    let mut clients: Vec<MqttClient> = vec![];
 
     for i in 0..10 {
         let id = format!("client-{}", i);
-        let mut client = Client::new(&id, true)
+        let mut client = MqttClient::new(&id, true)
                              .unwrap()
                              .keep_alive(5)
                              .will("goodbye", "my last words");
@@ -128,9 +128,9 @@ fn client_persistance() {
     //         Err(n) => panic!("Connection error = {:?}", n),
     //     }
     // }
-
+    let mid: i32 = 0;
     for client in clients.iter_mut() {
-        match client.connect("test.mosquitto.org") {
+        match client.connect("test.mosquitto.org", 1883) {
             Ok(_) => println!("Connection successful --> {:?}", client.id),
             Err(n) => panic!("Connection error = {:?}", n),
         }
@@ -140,7 +140,7 @@ fn client_persistance() {
         for i in 0..10 {
             // thread::sleep(Duration::from_millis(100));
             let message = format!("{}...{:?} - Message {}", count, client.id, i);
-            client.publish("ather/log-ship", &message, Qos::AtLeastOnce);
+            client.publish(Some(&mid), "ather/log-ship", &message, Qos::AtLeastOnce);
             count += 1;
         }
     }

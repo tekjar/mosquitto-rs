@@ -24,7 +24,7 @@ lazy_static! {
 
 // #[derive(Default)]
 // #[derive(Debug)]
-pub struct Client<'b, 'c, 'd> {
+pub struct MqttClient<'b, 'c, 'd> {
     pub id: String,
     pub user_name: Option<&'b str>,
     pub password: Option<&'c str>,
@@ -49,7 +49,7 @@ fn cleanup() {
     }
 }
 
-impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
+impl<'b, 'c, 'd> MqttClient<'b, 'c, 'd> {
     ///Creates a new mosquitto mqtt client
     ///
     ///**id**: ID of the new client  
@@ -58,11 +58,11 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     ///```ignore
     ///let mut client = Client::new(&id, true).unwrap()
     ///``
-    pub fn new(id: &str, clean: bool) -> Result<Client<'b, 'c, 'd>, i32> {
+    pub fn new(id: &str, clean: bool) -> Result<MqttClient<'b, 'c, 'd>, i32> {
         let icallbacks: HashMap<String, Box<FnMut(i32)>> = HashMap::new();
         let scallbacks: HashMap<String, Box<Fn(&str)>> = HashMap::new();
 
-        let mut client = Client {
+        let mut client = MqttClient {
             id: id.to_string(),
             user_name: None,
             password: None,
@@ -108,7 +108,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     ///keeping the connection alive
     ///
     ///```ignore
-    ///let mut client = Client::new(&id, true)
+    ///let mut client = MqttClient::new(&id, true)
     ///                         .unwrap()
     ///                         .keep_alive(5)
     ///```
@@ -125,7 +125,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
     ///after the client dies
     ///
     ///```ignore
-    ///let mut client = Client::new(&id, true)
+    ///let mut client = MqttClient::new(&id, true)
     ///                         .unwrap()
     ///                         .keep_alive(5)
     ///                         .will("goodbye", "my last words");
@@ -300,7 +300,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         unsafe extern "C" fn onconnect_wrapper(mqtt: *mut bindings::Struct_mosquitto,
                                                closure: *mut libc::c_void,
                                                val: libc::c_int) {
-            let client: &mut Client = mem::transmute(closure);
+            let client: &mut MqttClient = mem::transmute(closure);
             match client.icallbacks.get_mut("on_connect") {
                 Some(cb) => cb(val as i32),
                 _ => panic!("No callback found"),
@@ -355,7 +355,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
                                                  mid: libc::c_int,
                                                  qos_count: libc::c_int,
                                                  qos_list: *const ::libc::c_int) {
-            let client: &mut Client = mem::transmute(closure);
+            let client: &mut MqttClient = mem::transmute(closure);
             match client.icallbacks.get_mut("on_subscribe") {
                 Some(cb) => cb(mid as i32),
                 _ => panic!("No callback found"),
@@ -449,7 +449,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
         unsafe extern "C" fn onpublish_wrapper(mqtt: *mut bindings::Struct_mosquitto,
                                                closure: *mut libc::c_void,
                                                mid: libc::c_int) {
-            let client: &mut Client = mem::transmute(closure);
+            let client: &mut MqttClient = mem::transmute(closure);
             match client.icallbacks.get_mut("on_publish") {
                 Some(cb) => cb(mid as i32),
                 _ => panic!("No callback found"),
@@ -485,7 +485,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
             let mqtt_message = CStr::from_ptr(mqtt_message).to_bytes();
             let mqtt_message = std::str::from_utf8(mqtt_message).unwrap();
 
-            let client: &mut Client = mem::transmute(closure);
+            let client: &mut MqttClient = mem::transmute(closure);
             match client.scallbacks.get("on_message") {
                 Some(cb) => cb(mqtt_message),
                 _ => panic!("No callback found"),
@@ -523,7 +523,7 @@ impl<'b, 'c, 'd> Client<'b, 'c, 'd> {
 }
 
 
-impl<'b, 'c, 'd> Drop for Client<'b, 'c, 'd> {
+impl<'b, 'c, 'd> Drop for MqttClient<'b, 'c, 'd> {
     fn drop(&mut self) {
 
         unsafe {
