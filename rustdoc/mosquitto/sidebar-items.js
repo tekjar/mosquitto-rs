@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["Qos",""]],"struct":[["Client",""]]});
+initSidebarItems({"enum":[["Qos",""]],"struct":[["MqttClient",""]]});

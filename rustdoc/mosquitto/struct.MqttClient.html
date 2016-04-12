@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="rustdoc">
-    <meta name="description" content="API documentation for the Rust `Client` struct in crate `mosquitto`.">
-    <meta name="keywords" content="rust, rustlang, rust-lang, Client">
+    <meta name="description" content="API documentation for the Rust `MqttClient` struct in crate `mosquitto`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, MqttClient">
 
-    <title>mosquitto::Client - Rust</title>
+    <title>mosquitto::MqttClient - Rust</title>
 
     <link rel="stylesheet" type="text/css" href="../rustdoc.css">
     <link rel="stylesheet" type="text/css" href="../main.css">
@@ -27,7 +27,7 @@
 
     <nav class="sidebar">
         
-        <p class='location'><a href='index.html'>mosquitto</a></p><script>window.sidebarCurrent = {name: 'Client', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+        <p class='location'><a href='index.html'>mosquitto</a></p><script>window.sidebarCurrent = {name: 'MqttClient', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
     </nav>
 
     <nav class="sub">
@@ -42,12 +42,12 @@
     </nav>
 
     <section id='main' class="content struct">
-<h1 class='fqn'><span class='in-band'>Struct <a href='index.html'>mosquitto</a>::<wbr><a class='struct' href=''>Client</a></span><span class='out-of-band'><span id='render-detail'>
+<h1 class='fqn'><span class='in-band'>Struct <a href='index.html'>mosquitto</a>::<wbr><a class='struct' href=''>MqttClient</a></span><span class='out-of-band'><span id='render-detail'>
             <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                 [<span class='inner'>&#x2212;</span>]
             </a>
-        </span><a id='src-30' class='srclink' href='../src/mosquitto/lib.rs.html#27-37' title='goto source code'>[src]</a></span></h1>
-<pre class='rust struct'>pub struct Client&lt;'b, 'c, 'd&gt; {
+        </span><a id='src-31' class='srclink' href='../src/mosquitto/lib.rs.html#27-37' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct MqttClient&lt;'b, 'c, 'd&gt; {
     pub id: <a class='struct' href='https://doc.rust-lang.org/nightly/collections/string/struct.String.html' title='collections::string::String'>String</a>,
     pub user_name: <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;&amp;'b <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>&gt;,
     pub password: <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;&amp;'c <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>&gt;,
@@ -67,5 +67,5 @@
                                   <td id='structfield.clean_session'><code>clean_session</code></td><td></td></tr><tr class='stab '>
                                   <td id='structfield.icallbacks'><code>icallbacks</code></td><td></td></tr><tr class='stab '>
                                   <td id='structfield.scallbacks'><code>scallbacks</code></td><td></td></tr><tr class='stab '>
-                                  <td id='structfield.mosquitto'><code>mosquitto</code></td><td></td></tr></table><h2 id='methods'>Methods</h2><h3 class='impl'><code>impl&lt;'b, 'c, 'd&gt; <a class='struct' href='../mosquitto/struct.Client.html' title='mosquitto::Client'>Client</a>&lt;'b, 'c, 'd&gt;</code></h3><div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>(id: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>, clean: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../mosquitto/struct.Client.html' title='mosquitto::Client'>Client</a>&lt;'b, 'c, 'd&gt;, <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a>&gt;</code></h4>
+                                  <td id='structfield.mosquitto'><code>mosquitto</code></td><td></td></tr></table><h2 id='methods'>Methods</h2><h3 class='impl'><code>impl&lt;'b, 'c, 'd&gt; <a class='struct' href='../mosquitto/struct.MqttClient.html' title='mosquitto::MqttClient'>MqttClient</a>&lt;'b, 'c, 'd&gt;</code></h3><div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>(id: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>, clean: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../mosquitto/struct.MqttClient.html' title='mosquitto::MqttClient'>MqttClient</a>&lt;'b, 'c, 'd&gt;, <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a>&gt;</code></h4>
 <div class='docblock'>
