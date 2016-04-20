@@ -373,7 +373,7 @@ impl<'b, 'c, 'd> MqttClient<'b, 'c, 'd> {
     pub fn publish(&self,
                    mid: Option<&i32>,
                    topic: &str,
-                   message: &str,
+                   message: &Vec<u8>,
                    qos: Qos)
                    -> Result<(), i32> {
 
@@ -386,14 +386,10 @@ impl<'b, 'c, 'd> MqttClient<'b, 'c, 'd> {
         //
 
 
-        // If inputs are of type &str, Convert them to String
-        // let message = message.into();
-        // let topic = topic.into();
-
         let msg_len = message.len();
 
         let topic = CString::new(topic);
-        let message = CString::new(message);
+        // let message = CString::new(message);
 
         let qos = match qos {
             Qos::AtMostOnce => 0,
@@ -407,12 +403,13 @@ impl<'b, 'c, 'd> MqttClient<'b, 'c, 'd> {
             Some(m) => m as *const i32 as *mut i32,
             None => ptr::null_mut(),
         };
+
         unsafe {
             n_ret = bindings::mosquitto_publish(self.mosquitto,
                                                 c_mid,
                                                 topic.unwrap().as_ptr(),
                                                 msg_len as i32,
-                                                message.unwrap().as_ptr() as *mut libc::c_void,
+                                                message.as_ptr() as *mut libc::c_void,
                                                 qos,
                                                 0);
         }
