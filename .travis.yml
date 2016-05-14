@@ -16,6 +16,8 @@ branches:
   only:
   - master
   - auto
+notifications:
+    webhooks: https://billgates.herokuapp.com/travis
 script:
 - cargo build --verbose
 - cargo doc --no-deps;cp -r target/doc documentation/rustdoc
