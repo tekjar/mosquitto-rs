@@ -14,7 +14,6 @@ os:
 - linux
 branches:
   only:
-  - master
   - auto
 notifications:
     webhooks: https://billgates.herokuapp.com/travis
