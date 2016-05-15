@@ -1,6 +1,6 @@
 #mosquitto-rs [![travis](https://travis-ci.org/kteza1/mosquitto-rs.svg?branch=master)](https://travis-ci.org/kteza1/mosquitto-rs) [![Clippy Linting Result](http://clippy.bashy.io/github/kteza1/mosquitto-rs/master/badge.svg)](http://clippy.bashy.io/github/kteza1/mosquitto-rs/master/log)
 
-This crate provides rust wrappers for (unsafe) mosquitto mqtt library. With these wrappers you can write safe, fast, concurrent mqtt code. Since mosquitto libraries are low level and avalilable on almost all the platforms + combining rust's cross platform power, this crate is super portable.
+This crate provides rust wrappers for (unsafe) mosquitto mqtt library. With these wrappers you can write safe, fast, concurrent mqtt code. Since mosquitto libraries are low level and avalilable on almost all the platforms + combining rust's cross platform power, this crate is super portable
 
 I've tested this crate on following targets
 
