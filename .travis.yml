@@ -1,27 +1,16 @@
 language: rust
-sudo: false
-cache:
-  directories:
-  - "$HOME/.cargo"
+
 rust:
 - stable
-- beta
-- nightly
-matrix:
-  allow_failures:
-  - rust: nightly
-os:
-- linux
+
+sudo: required
+
 branches:
   only:
-  - auto
+    - auto
+    - try
+
 notifications:
-  webhooks: https://billgates.herokuapp.com/travis
-script:
-- cargo build --verbose
-- cargo doc --no-deps;cp -r target/doc documentation/rustdoc
-after_success:
-- bash scripts/upload_doc.sh
-env:
-  global:
-    secure: thEDMdg1psj36lu8ertS3UKlcUwyfRZFTNeaAAsaU0sjOqqqpp22pCBmPGFh9xoSwDFma6+AwodP6R05toQ57bNTdQGEF5v7qvb9++uD9oLxvz1Y0yyJZJJWSlp2J4eBDtjIbum/Kf/TBP9czS0UHxFWNM6qFuKFFxhJQb503mFf4MSCHyfFB2waHOgnNcjffQ74mUxsJlEQK8LEIS5xFwtogHbYQdFNEg7F80oi9XkJJ/VLsrI+4MAmwMh9wW9bFzeqSsyqnDGRXf2AJuCcIWlt9wPRX6lFMXV9eqjwWFyDDOMiSxIRqK/gd8Ftf8U2lM8HfPaNqWxwBE65NIX39Zo86BUadUR6sKz8+ZqS51UclrLiOXG7M0uwPXtTm7Hwn/rxhzEL27bp8uzy7jm97bd627roBrIAUt5/b1FsiAEtJ96hqs7GVIz8NpKFRvztSRTi/dLiKUvsUY0AebSq6IH3yjNAayYvuD+eZ2hXephaK5D57JnXxte4UiM3F0R94g5Prx39I9AR3orKpubKzWcZH3fM5f1Yp0kIp+JC4+ZOycy5koNV9m30NErFMJrl7CQoPAixwUwaWA6EODFrybGK7Fj2ttU2JY5zDdL8IdxEDAk3Wcab+Hf93DolNi6V5RPdY1Q0LBFH+SGnDD9YvE2DQJGFSW4r8JcR45MF1HA=
+  email:
+    on_success: never
+  webhooks: http://billgates.herokuapp.com/travis
