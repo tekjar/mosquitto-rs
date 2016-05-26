@@ -1,4 +1,4 @@
-#mosquitto-rs [![travis](https://travis-ci.org/kteza1/mosquitto-rs.svg?branch=master)](https://travis-ci.org/kteza1/mosquitto-rs) [![Clippy Linting Result](http://clippy.bashy.io/github/kteza1/mosquitto-rs/master/badge.svg)](http://clippy.bashy.io/github/kteza1/mosquitto-rs/master/log)
+#mosquitto-rs [![travis](https://travis-ci.org/kteza1/mosquitto-rs.svg?branch=master)](https://travis-ci.org/kteza1/mosquitto-rs)
 
 This crate provides rustful wrappers for (unsafe) mosquitto mqtt library.
 With these wrappers you can write safe, superfast, concurrent mqtt code.
