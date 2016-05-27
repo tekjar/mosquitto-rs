@@ -13,7 +13,7 @@ Tested this crate on following targets
 [API DOCUMENTATION](http://kteza1.github.io/mosquitto-rs/rustdoc/mosquitto/)
 
 ###HOW TO BUILD
-----
+---
 
 #####UBUNTU
 * sudo apt-add-repository ppa:mosquitto-dev/mosquitto-ppa
