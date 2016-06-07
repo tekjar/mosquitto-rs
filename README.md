@@ -3,12 +3,6 @@
 This crate provides rustful wrappers for (unsafe) mosquitto mqtt library.
 With these wrappers you can write safe, superfast, concurrent mqtt code.
 Since mosquitto libraries are low level and avalilable on almost all the platforms, this crate is super portable
-
-Tested this crate on following targets
-
-* x86_64-unknown-linux-gnu
-* x86_64-apple-darwin
-* arm-unknown-linux-gnueabihf
   
 [API DOCUMENTATION](http://kteza1.github.io/mosquitto-rs/rustdoc/mosquitto/)
 
