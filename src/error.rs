@@ -7,6 +7,8 @@ pub type Result<T> = result::Result<T, Error>;
 pub enum Error {
     InvalidMosqClient,
     ConnectionError(i32),
+    SubscribeError(i32),
+    PublishError(i32),
     AlreadyConnected,
     UnsupportedFeature,
     UnrecognizedPacket,

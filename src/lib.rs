@@ -46,6 +46,7 @@ pub struct MqttClientOptions {
     keep_alive: Option<Duration>,
     clean_session: bool,
     client_id: Option<String>,
+    retry_time: u32,
 }
 
 impl MqttClientOptions {
@@ -54,11 +55,18 @@ impl MqttClientOptions {
             keep_alive: Some(Duration::new(30, 0)),
             clean_session: true,
             client_id: None,
+            retry_time: 60,
         }
     }
 
     pub fn set_keep_alive(&mut self, secs: u16) -> &mut Self {
         self.keep_alive = Some(Duration::new(secs as u64, 0));
+        self
+    }
+
+
+    pub fn set_retry_time(&mut self, secs: u32) -> &mut Self {
+        self.retry_time = secs;
         self
     }
 
@@ -94,10 +102,15 @@ impl MqttClientOptions {
             bindings::mosquitto_new(c_id.as_ptr(), self.clean_session as u8, ptr::null_mut())
         };
 
+
+        unsafe {
+            bindings::mosquitto_message_retry_set(mosquitto_client, self.retry_time);
+        }
+
         let mut client = MqttClient {
             opts: self,
             host: addr,
-            connect_channel: chan::sync(0),
+            connect_synchronizer: chan::sync(0),
             icallbacks: icallbacks, // integer callbacks
             scallbacks: scallbacks, // string callbacks
             mosquitto: Arc::new(Mutex::new(mosquitto_client)),
@@ -130,15 +143,15 @@ impl MqttClientOptions {
 pub struct MqttClient {
     opts: MqttClientOptions,
     host: SocketAddr,
-    connect_channel: (Sender<i32>, Receiver<i32>),
+    connect_synchronizer: (Sender<i32>, Receiver<i32>),
     icallbacks: HashMap<String, Box<FnMut(i32)>>,
     scallbacks: HashMap<String, Box<Fn(&str)>>,
     mosquitto: Arc<Mutex<*mut bindings::Struct_mosquitto>>,
 }
 
 impl MqttClient {
-    fn handshake(&self) -> Result<()> {
-        let (_, ref receiver) = self.connect_channel;
+    fn connection_handshake(&self) -> Result<()> {
+        let (_, ref receiver) = self.connect_synchronizer;
         let ret = receiver.recv();
 
         match ret {
@@ -155,15 +168,28 @@ impl MqttClient {
         }
     }
 
-    ///Connects the client to broker. Connects to port 1883 by default (TODO)
-    ///Speciy in `HOST:PORT` format if you want to connect to a different port.
+
+    pub fn reinitialise(&self, clean: bool) {
+
+        let id = CString::new(self.opts.client_id.clone().unwrap()).unwrap();
+        let mosquitto = *self.mosquitto.lock().unwrap();
+        unsafe {
+            bindings::mosquitto_reinitialise(mosquitto, id.as_ptr(), clean as u8, ptr::null_mut());
+        }
+
+    }
+
+
+
+    /// Connects the client to broker. Connects to port 1883 by default (TODO)
+    /// Speciy in `HOST:PORT` format if you want to connect to a different port.
     ///
-    ///```ignore
+    /// ```ignore
     /// match client.connect("localhost") {
     ///     Ok(_) => println!("Connection successful --> {:?}", client.id),
     ///     Err(n) => panic!("Connection error = {:?}", n),
     /// }
-    ///```
+    /// ```
     ///
     pub fn connect(&mut self) -> Result<()> {
         let host = CString::new(self.host.ip().to_string()).unwrap();
@@ -188,7 +214,7 @@ impl MqttClient {
             }
         }
 
-        self.handshake()
+        self.connection_handshake()
     }
 
     pub fn reconnect(&self) -> Result<()> {
@@ -201,21 +227,21 @@ impl MqttClient {
             }
         };
 
-        self.handshake()
+        self.connection_handshake()
     }
 
-    ///Registered callback is called when the broker sends a CONNACK message in response
-    ///to a connection. Will be called even incase of failure. All your sub/pub stuff
-    ///should ideally be done in this callback when connection is successful
-    ///Callback argument specifies the connection state
-    ///```ignore
+    /// Registered callback is called when the broker sends a CONNACK message in response
+    /// to a connection. Will be called even incase of failure. All your sub/pub stuff
+    /// should ideally be done in this callback when connection is successful
+    /// Callback argument specifies the connection state
+    /// ```ignore
     /// let i = 100;
     ///
     /// client.onconnect_callback(move |a: i32| {
     ///         println!("i = {:?}", i);
     ///         println!("@@@ On connect callback {}@@@", a)
     ///     });
-    ///```
+    /// ```
     fn onconnect_register(&self) {
         let mosquitto = *self.mosquitto.lock().unwrap();
 
@@ -235,8 +261,187 @@ impl MqttClient {
                                                closure: *mut libc::c_void,
                                                val: libc::c_int) {
             let client: &mut MqttClient = mem::transmute(closure);
-            let (ref sender, _) = client.connect_channel;
+            let (ref sender, _) = client.connect_synchronizer;
             sender.send(val);
+        }
+    }
+
+
+    /// Subscibe to a topic with a Qos
+    ///
+    /// ```ignore
+    /// client.subscribe("hello/world", Qos::AtMostOnce);
+    /// ```
+    pub fn subscribe(&self, topic: &str, qos: Qos) -> Result<()> {
+        let topic = CString::new(topic);
+
+        let qos = match qos {
+            Qos::AtMostOnce => 0,
+            Qos::AtLeastOnce => 1,
+            Qos::ExactlyOnce => 2,
+        };
+
+        let mosquitto = *self.mosquitto.lock().unwrap();
+        let n_ret = unsafe {
+            bindings::mosquitto_subscribe(mosquitto, ptr::null_mut(), topic.unwrap().as_ptr(), qos)
+        };
+
+        if n_ret == 0 {
+            Ok(())
+        } else {
+            Err(Error::SubscribeError(n_ret))
+        }
+    }
+
+
+
+    /// Publish a message with a Qos
+    ///
+    /// ```ignore
+    /// let message = format!("{}...{:?} - Message {}", count, client.id, i);
+    /// client.publish("hello/world", &message, Qos::AtLeastOnce);
+    /// ```
+    pub fn publish(&self,
+                   mid: Option<&i32>,
+                   topic: &str,
+                   message: &Vec<u8>,
+                   qos: Qos)
+                   -> Result<()> {
+
+        // CString::new(topic).unwrap().as_ptr() is wrong.
+        // topic String gets destroyed and pointer is invalidated
+        // Whem message is created, it will allocate to destroyed space of 'topic'
+        // topic is now pointing to it and publish is happening on the same message String.
+        //
+        // Try let topic = CString::new(topic).unwrap().as_ptr(); instead of let topic = CString::new(topic)
+        //
+
+        let mosquitto = *self.mosquitto.lock().unwrap();
+        let msg_len = message.len();
+
+        let topic = CString::new(topic).unwrap();
+        // let message = CString::new(message);
+
+        let qos = match qos {
+            Qos::AtMostOnce => 0,
+            Qos::AtLeastOnce => 1,
+            Qos::ExactlyOnce => 2,
+        };
+
+        let n_ret: i32;
+
+        let c_mid = match mid {
+            Some(m) => m as *const i32 as *mut i32,
+            None => ptr::null_mut(),
+        };
+
+        unsafe {
+            n_ret = bindings::mosquitto_publish(mosquitto,
+                                                c_mid,
+                                                topic.as_ptr(),
+                                                msg_len as i32,
+                                                message.as_ptr() as *mut libc::c_void,
+                                                qos,
+                                                0);
+        }
+
+        if n_ret == 0 {
+            Ok(())
+        } else {
+            Err(Error::PublishError(n_ret))
+        }
+    }
+
+
+
+    /// Registered callback is called when a message initiated with `publish` has been
+    /// sent to the broker successfully.
+    ///
+    /// ```ignore
+    /// client.onpublish_callback(move |mid| {
+    ///         println!("@@@ Publish request received for message mid = {:?}", mid)
+    ///     });
+    /// ```
+    pub fn onpublish_callback<F>(&mut self, callback: F)
+        where F: FnMut(i32),
+              F: 'static
+    {
+        let mosquitto = *self.mosquitto.lock().unwrap();
+        self.icallbacks.insert("on_publish".to_string(), Box::new(callback));
+        let cb = self as *const _ as *mut libc::c_void;
+
+        unsafe {
+            bindings::mosquitto_user_data_set(mosquitto, cb);
+            bindings::mosquitto_publish_callback_set(mosquitto, Some(onpublish_wrapper));
+        }
+
+        unsafe extern "C" fn onpublish_wrapper(mqtt: *mut bindings::Struct_mosquitto,
+                                               closure: *mut libc::c_void,
+                                               mid: libc::c_int) {
+            let client: &mut MqttClient = mem::transmute(closure);
+            match client.icallbacks.get_mut("on_publish") {
+                Some(cb) => cb(mid as i32),
+                _ => panic!("No callback found"),
+            }
+        }
+
+    }
+
+
+    /// Registered callback will be called when a message is received from the broker
+    ///
+    /// ```ignore
+    /// client.onmesssage_callback(move |s| {
+    ///         println!("@@@ Message = {:?}, Count = {:?}", s, count);
+    ///     });
+    /// ```
+    pub fn onmesssage_callback<F>(&mut self, callback: F)
+        where F: Fn(&str),
+              F: 'static
+    {
+        let mosquitto = *self.mosquitto.lock().unwrap();
+        self.scallbacks.insert("on_message".to_string(), Box::new(callback));
+        let cb = self as *const _ as *mut libc::c_void;
+        unsafe {
+            bindings::mosquitto_user_data_set(mosquitto, cb); /* Set our closure as user data */
+            bindings::mosquitto_message_callback_set(mosquitto, Some(onmessage_wrapper));
+        }
+
+
+        unsafe extern "C" fn onmessage_wrapper(mqtt: *mut bindings::Struct_mosquitto, closure: *mut libc::c_void, mqtt_message: *const bindings::Struct_mosquitto_message)
+        {
+
+            let mqtt_message = (*mqtt_message).payload as *const libc::c_char;
+            let mqtt_message = CStr::from_ptr(mqtt_message).to_bytes();
+            let mqtt_message = std::str::from_utf8(mqtt_message).unwrap();
+
+            let client: &mut MqttClient = mem::transmute(closure);
+            match client.scallbacks.get("on_message") {
+                Some(cb) => cb(mqtt_message),
+                _ => panic!("No callback found"),
+            }
+        }
+    }
+}
+
+
+impl Drop for MqttClient {
+    fn drop(&mut self) {
+        let mosquitto = *self.mosquitto.lock().unwrap();
+        unsafe {
+            bindings::mosquitto_disconnect(mosquitto);
+            bindings::mosquitto_loop_stop(mosquitto, true as u8);
+            bindings::mosquitto_destroy(mosquitto);
+        }
+
+        let mut instances = INSTANCES.lock().unwrap();
+        println!("mosq client instance {:?} desroyed", *instances);
+        *instances -= 1;
+
+
+        if *instances == 0 {
+            println!("@@@ All clients dead. Cleaning mosquitto library @@@");
+            cleanup();
         }
     }
 }
