@@ -20,7 +20,7 @@ pub enum Error {
     Timeout,
     ConnectionRefused(i32),
     Io(io::Error),
-    InvalidCertPath(&str),
+    InvalidCert(String),
 }
 
 impl From<io::Error> for Error {

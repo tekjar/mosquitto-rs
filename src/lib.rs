@@ -14,7 +14,7 @@ mod error;
 
 use std::ptr;
 use std::mem;
-use std::ffi::{CString, CStr, NulError};
+use std::ffi::{CString, CStr};
 use std::collections::HashMap;
 use std::time::Duration;
 use rand::Rng;
@@ -24,7 +24,9 @@ use chan::{Sender, Receiver};
 #[macro_use]
 extern crate lazy_static;
 use std::sync::{Arc, Mutex};
-use std::path::Path;
+use std::path::PathBuf;
+use std::collections::VecDeque;
+use std::thread;
 
 
 lazy_static! {
@@ -49,9 +51,10 @@ pub struct MqttClientOptions {
     clean_session: bool,
     client_id: Option<String>,
     retry_time: u32,
-    ca_cert: Option<Path>,
-    client_cert: Option<Path>,
-    clinet_key: Option<Path>,
+    ca_cert: Option<PathBuf>,
+    client_cert: Option<PathBuf>,
+    client_key: Option<PathBuf>,
+    publish_queue_limit: u32,
 }
 
 impl MqttClientOptions {
@@ -63,7 +66,8 @@ impl MqttClientOptions {
             retry_time: 60,
             ca_cert: None,
             client_cert: None,
-            clinet_key: None,
+            client_key: None,
+            publish_queue_limit: 50,
         }
     }
 
@@ -88,18 +92,23 @@ impl MqttClientOptions {
         self
     }
 
-    pub fn set_ca_crt(&mut self, path: Path) -> &mut Self {
+    pub fn set_ca_crt(&mut self, path: PathBuf) -> &mut Self {
         self.ca_cert = Some(path);
         self
     }
 
-    pub fn set_client_crt(&mut self, path: Path) -> &mut Self {
+    pub fn set_client_crt(&mut self, path: PathBuf) -> &mut Self {
         self.client_cert = Some(path);
         self
     }
 
-    pub fn set_client_key(&mut self, path: Path) -> &mut Self {
+    pub fn set_client_key(&mut self, path: PathBuf) -> &mut Self {
         self.client_key = Some(path);
+        self
+    }
+
+    pub fn set_publish_queue_limit(&mut self, limit: u32) -> &mut Self {
+        self.publish_queue_limit = limit;
         self
     }
 
@@ -108,6 +117,54 @@ impl MqttClientOptions {
         let id = rng.gen::<u32>();
         self.client_id = Some(format!("mqttc_{}", id));
         self
+    }
+
+    fn mosquitto_lib_init(&mut self) {
+        let mut instances = INSTANCES.lock().unwrap();
+        *instances += 1;
+        debug!("mosq client instance {:?} created", *instances);
+        if *instances == 1 {
+            unsafe {
+                debug!("@@@ Initializing mosquitto library @@@");
+                bindings::mosquitto_lib_init();
+            }
+        }
+    }
+
+    fn set_tls(&mut self, mosquitto_client: *mut bindings::Struct_mosquitto) -> Result<()> {
+        // set tls
+        let ca_cert = self.ca_cert.clone().unwrap();
+        let client_cert = self.client_cert.clone().unwrap();
+        let client_key = self.client_key.clone().unwrap();
+
+        if ca_cert.exists() == false {
+            return Err(Error::InvalidCert("no ca cert found".to_string()));
+        } else if client_cert.exists() == false {
+            return Err(Error::InvalidCert("no client cert found".to_string()));
+        } else if client_key.exists() == false {
+            return Err(Error::InvalidCert("no client key found".to_string()));
+        }
+
+        let c_ca_cert = CString::new(client_cert.to_str().unwrap()).unwrap();
+        let c_client_cert = CString::new(client_cert.to_str().unwrap()).unwrap();
+        let c_client_key = CString::new(client_key.to_str().unwrap()).unwrap();
+
+        let tls_ret = unsafe {
+            bindings::mosquitto_tls_insecure_set(mosquitto_client, 1 as u8);
+            bindings::mosquitto_tls_set(mosquitto_client,
+                                        c_ca_cert.as_ptr(),
+                                        ptr::null_mut(),
+                                        c_client_cert.as_ptr(),
+                                        c_client_key.as_ptr(),
+                                        None)
+        };
+
+        if tls_ret != 0 {
+            cleanup();
+            return Err(Error::TlsError(tls_ret));
+        }
+
+        Ok(())
     }
 
     pub fn connect<A: ToSocketAddrs>(mut self, addr: A) -> Result<MqttClient> {
@@ -130,39 +187,20 @@ impl MqttClientOptions {
             bindings::mosquitto_message_retry_set(mosquitto_client, self.retry_time);
         }
 
-
-        // set tls
         if self.ca_cert.is_some() && self.client_cert.is_some() && self.client_key.is_some() {
-            let ca_cert = self.ca_cert.unwrap();
-            let client_cert = self.client_cert.unwrap();
-            let client_key = self.client_key.unwrap();
+            try!(self.set_tls(mosquitto_client));
+        } else if self.ca_cert.is_none() && self.client_cert.is_none() && self.client_key.is_none() {
 
-            if ca_cert.exists() == false {
-                return Err(Error::InvalidCertPath("no ca cert found"));
-            }else if client_cert.exists() == false {
-                return Err(Error::InvalidCertPath("no client cert found"));
-            }else if client_key.exists() == false {
-                return Err(Error::InvalidCertPath("no client key found"));
-            }
+        } else {
+            return Err(Error::InvalidCert("Provide ca, cert and key".to_string()));
+        }
 
-            c_ca_cert = CString::new(client_cert).unwrap();
-            c_client_cert = CString::new(client_cert).unwrap();
-            c_client_key = CString::new(client_key).unwrap();
-                
-                let tls_ret = unsafe {
-                    bindings::mosquitto_tls_insecure_set(mosquitto_client, 1 as u8);
-                    bindings::mosquitto_tls_set(mosquitto_client,
-                                                          c_ca_cert.as_ptr(),
-                                                          ptr::null_mut(),
-                                                          c_client_cert.as_ptr(),
-                                                          c_client_key.as_ptr(),
-                                                          None);
-                }
-
-                if tls_ret != 0 {
-                    cleanup();
-                    return Err(Error::TlsError(tls_ret));
-                }
+        // initialize mosquitto lib once during the creation of 1st
+        // client for tls to work
+        if mosquitto_client != ptr::null_mut() {
+            self.mosquitto_lib_init();
+        } else {
+            return Err(Error::InvalidMosqClient);
         }
 
         let mut client = MqttClient {
@@ -172,24 +210,10 @@ impl MqttClientOptions {
             icallbacks: icallbacks, // integer callbacks
             scallbacks: scallbacks, // string callbacks
             mosquitto: Arc::new(Mutex::new(mosquitto_client)),
+            publish_limiter_queue: VecDeque::new(), // TODO: Add with capacity
         };
         client.onconnect_register();
-
-        // initialize mosquitto lib once during the creation of 1st
-        // client for tls to work
-        if mosquitto_client != ptr::null_mut() {
-            let mut instances = INSTANCES.lock().unwrap();
-            *instances += 1;
-            debug!("mosq client instance {:?} created", *instances);
-            if *instances == 1 {
-                unsafe {
-                    debug!("@@@ Initializing mosquitto library @@@");
-                    bindings::mosquitto_lib_init();
-                }
-            }
-        } else {
-            return Err(Error::InvalidMosqClient);
-        }
+        // client.onpublish_callback(None);
 
         try!(client.connect());
         Ok(client)
@@ -205,6 +229,7 @@ pub struct MqttClient {
     icallbacks: HashMap<String, Box<FnMut(i32)>>,
     scallbacks: HashMap<String, Box<Fn(&str)>>,
     mosquitto: Arc<Mutex<*mut bindings::Struct_mosquitto>>,
+    publish_limiter_queue: VecDeque<i32>,
 }
 
 impl MqttClient {
@@ -249,7 +274,7 @@ impl MqttClient {
     /// }
     /// ```
     ///
-    pub fn connect(&mut self) -> Result<()> {
+    fn connect(&mut self) -> Result<()> {
         let host = CString::new(self.host.ip().to_string()).unwrap();
 
         let n_ret;
@@ -315,7 +340,7 @@ impl MqttClient {
         }
 
         // Registered callback. user data is our closure
-        unsafe extern "C" fn onconnect_wrapper(mqtt: *mut bindings::Struct_mosquitto,
+        unsafe extern "C" fn onconnect_wrapper(_: *mut bindings::Struct_mosquitto,
                                                closure: *mut libc::c_void,
                                                val: libc::c_int) {
             let client: &mut MqttClient = mem::transmute(closure);
@@ -359,7 +384,7 @@ impl MqttClient {
     /// let message = format!("{}...{:?} - Message {}", count, client.id, i);
     /// client.publish("hello/world", &message, Qos::AtLeastOnce);
     /// ```
-    pub fn publish(&self,
+    pub fn publish(&mut self,
                    mid: Option<&i32>,
                    topic: &str,
                    message: &Vec<u8>,
@@ -386,24 +411,35 @@ impl MqttClient {
             Qos::ExactlyOnce => 2,
         };
 
-        let n_ret: i32;
-
         let c_mid = match mid {
             Some(m) => m as *const i32 as *mut i32,
             None => ptr::null_mut(),
         };
 
-        unsafe {
-            n_ret = bindings::mosquitto_publish(mosquitto,
-                                                c_mid,
-                                                topic.as_ptr(),
-                                                msg_len as i32,
-                                                message.as_ptr() as *mut libc::c_void,
-                                                qos,
-                                                0);
+        // stop here if publish limiter queue is full
+        loop {
+            if self.publish_limiter_queue.len() < self.opts.publish_queue_limit as usize {
+                break;
+            } else {
+                thread::sleep(Duration::new(3, 0));
+                continue;
+            }
         }
 
+
+        let n_ret = unsafe {
+            bindings::mosquitto_publish(mosquitto,
+                                        c_mid,
+                                        topic.as_ptr(),
+                                        msg_len as i32,
+                                        message.as_ptr() as *mut libc::c_void,
+                                        qos,
+                                        0)
+        };
+
         if n_ret == 0 {
+            self.publish_limiter_queue.push_back(*mid.unwrap());
+            debug!("publish limiter queue --> {:?}", self.publish_limiter_queue);
             Ok(())
         } else {
             Err(Error::PublishError(n_ret))
@@ -420,12 +456,16 @@ impl MqttClient {
     ///         println!("@@@ Publish request received for message mid = {:?}", mid)
     ///     });
     /// ```
-    pub fn onpublish_callback<F>(&mut self, callback: F)
+    pub fn onpublish_callback<F>(&mut self, callback: Option<F>)
         where F: FnMut(i32),
               F: 'static
     {
         let mosquitto = *self.mosquitto.lock().unwrap();
-        self.icallbacks.insert("on_publish".to_string(), Box::new(callback));
+
+        if callback.is_some() {
+            self.icallbacks.insert("on_publish".to_string(), Box::new(callback.unwrap()));
+        }
+
         let cb = self as *const _ as *mut libc::c_void;
 
         unsafe {
@@ -433,10 +473,18 @@ impl MqttClient {
             bindings::mosquitto_publish_callback_set(mosquitto, Some(onpublish_wrapper));
         }
 
-        unsafe extern "C" fn onpublish_wrapper(mqtt: *mut bindings::Struct_mosquitto,
+        unsafe extern "C" fn onpublish_wrapper(_: *mut bindings::Struct_mosquitto,
                                                closure: *mut libc::c_void,
                                                mid: libc::c_int) {
             let client: &mut MqttClient = mem::transmute(closure);
+
+            // pop the element from publish limiter queue
+            // TODO: Find out whether this is safe of not
+            client.publish_limiter_queue
+                  .iter()
+                  .position(|&n| n == mid)
+                  .map(|e| client.publish_limiter_queue.remove(e));
+
             match client.icallbacks.get_mut("on_publish") {
                 Some(cb) => cb(mid as i32),
                 _ => panic!("No callback found"),
@@ -466,7 +514,7 @@ impl MqttClient {
         }
 
 
-        unsafe extern "C" fn onmessage_wrapper(mqtt: *mut bindings::Struct_mosquitto, closure: *mut libc::c_void, mqtt_message: *const bindings::Struct_mosquitto_message)
+        unsafe extern "C" fn onmessage_wrapper(_: *mut bindings::Struct_mosquitto, closure: *mut libc::c_void, mqtt_message: *const bindings::Struct_mosquitto_message)
         {
 
             let mqtt_message = (*mqtt_message).payload as *const libc::c_char;
@@ -493,12 +541,12 @@ impl Drop for MqttClient {
         }
 
         let mut instances = INSTANCES.lock().unwrap();
-        println!("mosq client instance {:?} desroyed", *instances);
+        debug!("mosq client instance {:?} desroyed", *instances);
         *instances -= 1;
 
 
         if *instances == 0 {
-            println!("@@@ All clients dead. Cleaning mosquitto library @@@");
+            info!("@@@ All clients dead. Cleaning mosquitto library @@@");
             cleanup();
         }
     }
