@@ -7,6 +7,7 @@ pub type Result<T> = result::Result<T, Error>;
 pub enum Error {
     InvalidMosqClient,
     ConnectionError(i32),
+    TlsError(i32),
     SubscribeError(i32),
     PublishError(i32),
     AlreadyConnected,
@@ -19,6 +20,7 @@ pub enum Error {
     Timeout,
     ConnectionRefused(i32),
     Io(io::Error),
+    InvalidCertPath(&str),
 }
 
 impl From<io::Error> for Error {

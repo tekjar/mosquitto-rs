@@ -24,6 +24,8 @@ use chan::{Sender, Receiver};
 #[macro_use]
 extern crate lazy_static;
 use std::sync::{Arc, Mutex};
+use std::path::Path;
+
 
 lazy_static! {
     static ref INSTANCES: Mutex<usize> = Mutex::new(0);
@@ -47,6 +49,9 @@ pub struct MqttClientOptions {
     clean_session: bool,
     client_id: Option<String>,
     retry_time: u32,
+    ca_cert: Option<Path>,
+    client_cert: Option<Path>,
+    clinet_key: Option<Path>,
 }
 
 impl MqttClientOptions {
@@ -56,6 +61,9 @@ impl MqttClientOptions {
             clean_session: true,
             client_id: None,
             retry_time: 60,
+            ca_cert: None,
+            client_cert: None,
+            clinet_key: None,
         }
     }
 
@@ -77,6 +85,21 @@ impl MqttClientOptions {
 
     pub fn set_clean_session(&mut self, clean_session: bool) -> &mut Self {
         self.clean_session = clean_session;
+        self
+    }
+
+    pub fn set_ca_crt(&mut self, path: Path) -> &mut Self {
+        self.ca_cert = Some(path);
+        self
+    }
+
+    pub fn set_client_crt(&mut self, path: Path) -> &mut Self {
+        self.client_cert = Some(path);
+        self
+    }
+
+    pub fn set_client_key(&mut self, path: Path) -> &mut Self {
+        self.client_key = Some(path);
         self
     }
 
@@ -102,9 +125,44 @@ impl MqttClientOptions {
             bindings::mosquitto_new(c_id.as_ptr(), self.clean_session as u8, ptr::null_mut())
         };
 
-
+        // set message retry time
         unsafe {
             bindings::mosquitto_message_retry_set(mosquitto_client, self.retry_time);
+        }
+
+
+        // set tls
+        if self.ca_cert.is_some() && self.client_cert.is_some() && self.client_key.is_some() {
+            let ca_cert = self.ca_cert.unwrap();
+            let client_cert = self.client_cert.unwrap();
+            let client_key = self.client_key.unwrap();
+
+            if ca_cert.exists() == false {
+                return Err(Error::InvalidCertPath("no ca cert found"));
+            }else if client_cert.exists() == false {
+                return Err(Error::InvalidCertPath("no client cert found"));
+            }else if client_key.exists() == false {
+                return Err(Error::InvalidCertPath("no client key found"));
+            }
+
+            c_ca_cert = CString::new(client_cert).unwrap();
+            c_client_cert = CString::new(client_cert).unwrap();
+            c_client_key = CString::new(client_key).unwrap();
+                
+                let tls_ret = unsafe {
+                    bindings::mosquitto_tls_insecure_set(mosquitto_client, 1 as u8);
+                    bindings::mosquitto_tls_set(mosquitto_client,
+                                                          c_ca_cert.as_ptr(),
+                                                          ptr::null_mut(),
+                                                          c_client_cert.as_ptr(),
+                                                          c_client_key.as_ptr(),
+                                                          None);
+                }
+
+                if tls_ret != 0 {
+                    cleanup();
+                    return Err(Error::TlsError(tls_ret));
+                }
         }
 
         let mut client = MqttClient {
