@@ -1,5 +1,7 @@
 #mosquitto-rs [![travis](https://travis-ci.org/kteza1/mosquitto-rs.svg?branch=master)](https://travis-ci.org/kteza1/mosquitto-rs)
 
+#### DEPRECATED: New pure rust client in development [here](https://github.com/kteza1/rumqtt)
+
 This crate provides rustful wrappers for (unsafe) mosquitto mqtt library.
 With these wrappers you can write safe, superfast, concurrent mqtt code.
 Since mosquitto libraries are low level and avalilable on almost all the platforms, this crate is super portable
